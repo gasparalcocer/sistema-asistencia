@@ -88,9 +88,9 @@
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIG
+        // --- CONFIGURACIÓN DE SEGURIDAD MEJORADA ---
         const DISTANCIA_MAXIMA_METROS = 200; 
-        const TIEMPO_MAXIMO_QR_SEGUNDOS = 120;
+        const TIEMPO_MAXIMO_QR_SEGUNDOS = 30; // Reducido de 120 a 30 segundos
         const LAT_SALON = 21.0483; 
         const LNG_SALON = -89.6433; 
 
@@ -129,28 +129,41 @@
             } else { window.location.href = "login.html"; }
         });
 
+        // --- HELPER: OBTENER HORA REAL DE INTERNET ---
+        async function obtenerHoraInternet() {
+            try {
+                // Hacemos una petición ligera a nuestro propio servidor (Github Pages) para ver su hora
+                // Esto evita que el alumno cambie la hora de su celular para engañar al sistema.
+                const response = await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' });
+                const serverDateStr = response.headers.get('date');
+                if (serverDateStr) {
+                    return new Date(serverDateStr).getTime();
+                }
+                throw new Error("No date header");
+            } catch (e) {
+                console.warn("No se pudo obtener hora de internet, usando local con advertencia.");
+                return new Date().getTime(); // Fallback por si falla internet, pero el QR expira rápido
+            }
+        }
+
         // --- CÁLCULO DE ESTADÍSTICAS ---
         async function calcularEstadisticas(materia) {
-            // UI de carga
             document.getElementById('stat-previo-porc').innerText = "...";
             document.getElementById('stat-previo-texto').innerText = "Analizando historial...";
             
             try {
-                // 1. Obtener todas las asistencias de esta materia
                 const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia));
                 const snapshot = await getDocs(q);
                 
                 if (snapshot.empty) {
-                    return { porcentaje: 100, asistidas: 0, totales: 0 }; // Clase nueva
+                    return { porcentaje: 100, asistidas: 0, totales: 0 };
                 }
 
-                // 2. Filtrar fechas únicas (Total de clases impartidas)
                 const fechasTotales = new Set();
                 const fechasAlumno = new Set();
 
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    // Usamos la fecha YYYY-MM-DD como identificador único de sesión
                     const fechaStr = d.timestamp.toDate().toISOString().split('T')[0];
                     fechasTotales.add(fechaStr);
 
@@ -187,12 +200,9 @@
             const stats = await calcularEstadisticas(materia);
             
             if (stats) {
-                // Actualizar UI Previo
                 const elPorc = document.getElementById('stat-previo-porc');
                 elPorc.innerText = stats.porcentaje + "%";
                 document.getElementById('stat-previo-texto').innerText = `${stats.asistidas} de ${stats.totales} clases`;
-
-                // Colores semáforo
                 elPorc.className = "text-2xl font-bold " + (stats.porcentaje < 80 ? "text-red-600" : "text-green-600");
             }
         });
@@ -223,32 +233,43 @@
             if (!materia) return alert("⚠️ Selecciona una materia primero.");
 
             html5QrCode.pause();
-            msgStatus.innerText = "Validando...";
+            msgStatus.innerText = "Verificando hora de red...";
             
             try {
                 const dataQR = JSON.parse(decodedText);
+                
+                // 1. VALIDACIÓN ANTI-FRAUDE DE TIEMPO
+                const ahoraInternet = await obtenerHoraInternet();
+                const diferenciaTiempo = (ahoraInternet - dataQR.t) / 1000;
+
+                // Validación estricta: No aceptamos QRs de más de 30 seg, ni QRs del futuro
+                if (diferenciaTiempo > TIEMPO_MAXIMO_QR_SEGUNDOS) {
+                    throw new Error("🚫 CÓDIGO CADUCADO<br>Este QR es antiguo. Escanea el que está en la pantalla ahora.");
+                }
+                if (diferenciaTiempo < -5) { // Tolerancia de 5s para relojes desfasados ligeramente
+                    throw new Error("🚫 HORA INVÁLIDA<br>Tu reloj o el código tienen una hora incorrecta.");
+                }
+
                 if (dataQR.id !== materia) throw new Error(`QR Incorrecto.<br>Elegiste: <b>${materia}</b><br>QR es de: <b>${dataQR.id}</b>`);
-                if ((new Date().getTime() - dataQR.t) / 1000 > TIEMPO_MAXIMO_QR_SEGUNDOS) throw new Error("Código caducado.");
+                
                 if (!navigator.geolocation) throw new Error("GPS requerido.");
                 
+                msgStatus.innerText = "Verificando ubicación...";
+
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const dist = calcularDistancia(LAT_SALON, LNG_SALON, pos.coords.latitude, pos.coords.longitude);
                     if (dist > DISTANCIA_MAXIMA_METROS) {
                         mostrarResultado(false, "Ubicación Incorrecta", `Estás a ${dist.toFixed(0)}m del salón.`);
                     } else {
                         // GUARDAR
+                        msgStatus.innerText = "Registrando...";
                         await addDoc(collection(db, "asistencias"), {
                             id_sesion: dataQR.id, qr_token: dataQR.t, alumno: datosUsuario,
                             ubicacion: { lat: pos.coords.latitude, lng: pos.coords.longitude },
                             timestamp: serverTimestamp(), dispositivo: navigator.userAgent
                         });
 
-                        // RE-CALCULAR ESTADÍSTICAS (Ahora incluirá la nueva asistencia)
-                        // Pequeño delay para asegurar que Firebase procese la escritura local o remota
-                        msgStatus.innerText = "Calculando nuevo promedio...";
-                        
-                        // Nota: Como acabamos de escribir, si leemos inmediatamente tal vez no salga si es lento,
-                        // pero Firestore local suele ser rápido.
+                        msgStatus.innerText = "Actualizando estadísticas...";
                         const stats = await calcularEstadisticas(materia);
                         mostrarResultado(true, "¡Asistencia Registrada!", `Clase: ${materia}`, stats);
                         html5QrCode.stop();
@@ -269,7 +290,6 @@
                 icon.innerHTML = "✅"; icon.className = "text-5xl mb-2 text-green-500";
                 title.className = "text-xl font-bold text-green-700";
                 
-                // Mostrar Panel Stats Nuevo
                 if (stats) {
                     const elPorc = document.getElementById('stat-nuevo-porc');
                     elPorc.innerText = stats.porcentaje + "%";
@@ -279,7 +299,6 @@
             } else {
                 icon.innerHTML = "❌"; icon.className = "text-5xl mb-2 text-red-500";
                 title.className = "text-xl font-bold text-red-700";
-                // Ocultar stats si falló
                 document.querySelector('.bg-blue-50').classList.add('hidden');
             }
             title.innerText = titulo;

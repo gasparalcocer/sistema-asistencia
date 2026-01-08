@@ -7,8 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <style>
-        .tab-active { border-bottom: 2px solid #1e3a8a; color: #1e3a8a; font-weight: bold; }
-        .tab-inactive { color: #6b7280; }
+        .tab-active { border-bottom: 3px solid #1e3a8a; color: #1e3a8a; font-weight: 800; background-color: #eff6ff; }
+        .tab-inactive { color: #6b7280; hover:bg-gray-50; }
+        /* Estilos para la tabla grande */
+        .table-matrix th, .table-matrix td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-size: 0.85rem; }
+        .bg-cell-present { background-color: #dcfce7; color: #166534; font-weight: bold; } /* Verde asistencia */
+        .bg-cell-absent { background-color: #fee2e2; color: #991b1b; } /* Rojo falta */
     </style>
 </head>
 <body id="main-body" class="bg-gray-100 min-h-screen font-sans" style="display: none;">
@@ -18,8 +22,8 @@
         <p class="text-blue-900 font-bold">Cargando Panel Docente...</p>
     </div>
 
-    <nav class="bg-blue-900 text-white shadow-md">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+    <nav class="bg-blue-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <div class="h-8 w-8 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold">U</div>
                 <span class="font-bold text-lg">Docente UADY</span>
@@ -33,22 +37,25 @@
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-4">
+    <main class="max-w-7xl mx-auto p-4">
         
-        <div class="flex border-b border-gray-300 mb-6 bg-white rounded-t-lg px-4 pt-2 shadow-sm">
-            <button onclick="cambiarTab('qr')" id="tab-qr" class="tab-active py-3 px-6 focus:outline-none">
+        <div class="flex flex-wrap border-b border-gray-300 mb-6 bg-white rounded-lg px-2 pt-2 shadow-sm overflow-x-auto">
+            <button onclick="cambiarTab('qr')" id="tab-qr" class="tab-active flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
                 Generar QR
             </button>
-            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive py-3 px-6 focus:outline-none">
-                Historial de Asistencia
+            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
+                Historial Simple
             </button>
-            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive py-3 px-6 focus:outline-none">
+            <button onclick="cambiarTab('reporte')" id="tab-reporte" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap text-blue-700 font-bold">
+                📊 Sábana de Asistencias
+            </button>
+            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
                 Administrar Clases
             </button>
         </div>
 
         <div id="view-qr" class="view-section">
-            <div class="bg-white p-8 rounded-lg shadow text-center max-w-lg mx-auto">
+            <div class="bg-white p-8 rounded-lg shadow text-center max-w-lg mx-auto border-t-4 border-blue-900">
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">Pasar Lista</h2>
                 <p class="text-gray-500 mb-6 text-sm">Selecciona una clase para generar el código.</p>
 
@@ -57,21 +64,20 @@
                     <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4 focus:ring-2 focus:ring-blue-500">
                         <option value="">-- Cargar materias... --</option>
                     </select>
-                    
-                    <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition">
+                    <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg">
                         Comenzar Clase
                     </button>
                 </div>
 
                 <div id="panel-qr-activo" class="hidden mt-6 border-t pt-6">
                     <h3 id="titulo-clase-activa" class="text-xl font-bold text-blue-900 mb-2"></h3>
-                    <div class="flex justify-center mb-4 bg-white p-2 inline-block rounded">
+                    <div class="flex justify-center mb-4 bg-white p-2 inline-block rounded shadow-inner border">
                         <canvas id="qrcode"></canvas>
                     </div>
                     <div class="text-sm text-gray-500">
-                        Actualizando seguridad en: <span id="contador" class="font-bold text-red-500 text-xl">10</span>s
+                        Actualizando código en: <span id="contador" class="font-bold text-red-500 text-xl">10</span>s
                     </div>
-                    <button onclick="detenerClase()" class="mt-6 text-red-500 underline text-sm hover:text-red-700">
+                    <button onclick="detenerClase()" class="mt-6 text-red-500 underline text-sm hover:text-red-700 font-bold">
                         Detener Clase
                     </button>
                 </div>
@@ -80,65 +86,84 @@
 
         <div id="view-historial" class="view-section hidden">
             <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Reporte de Asistencias</h2>
-                
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Bitácora Diaria</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label class="text-xs font-bold text-gray-500">Materia</label>
-                        <select id="filtro-clase" class="w-full p-2 border rounded text-sm">
-                            <option value="todas">Todas las materias</option>
-                        </select>
+                        <select id="filtro-clase" class="w-full p-2 border rounded text-sm"></select>
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-500">Fecha</label>
+                        <label class="text-xs font-bold text-gray-500">Fecha Específica</label>
                         <input type="date" id="filtro-fecha" class="w-full p-2 border rounded text-sm">
                     </div>
                     <div class="flex items-end">
                         <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">
-                            Buscar 🔍
+                            Buscar Registros
                         </button>
                     </div>
                 </div>
-
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
                                 <th class="px-6 py-3">Fecha/Hora</th>
                                 <th class="px-6 py-3">Alumno</th>
                                 <th class="px-6 py-3">Matrícula</th>
-                                <th class="px-6 py-3">Materia</th>
                                 <th class="px-6 py-3">Estado</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-body">
-                            <tr><td colspan="5" class="text-center py-4">Selecciona filtros y busca para ver resultados</td></tr>
+                            <tr><td colspan="4" class="text-center py-4">Selecciona filtros para ver detalles</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <div id="view-clases" class="view-section hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <div class="bg-white p-6 rounded-lg shadow h-fit">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">➕ Nueva Materia</h2>
-                    <form id="form-add-clase">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre de la materia</label>
-                        <input type="text" id="nueva-clase-nombre" required placeholder="Ej: Cálculo Diferencial" class="w-full p-2 border rounded mb-3">
-                        
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Código / ID (Opcional)</label>
-                        <input type="text" id="nueva-clase-id" placeholder="Ej: MAT-101" class="w-full p-2 border rounded mb-4">
-
-                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">
-                            Guardar Materia
+        <div id="view-reporte" class="view-section hidden">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-blue-900">📊 Porcentaje de Asistencias</h2>
+                        <p class="text-sm text-gray-500">Vista global por alumno y fechas</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-2">
+                        <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]">
+                            <option value="">-- Selecciona Materia --</option>
+                        </select>
+                        <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow">
+                            Generar Tabla
                         </button>
-                    </form>
+                    </div>
                 </div>
 
+                <div class="overflow-x-auto bg-white border rounded-lg">
+                    <table class="w-full table-matrix border-collapse">
+                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs" id="matriz-head">
+                            <tr><th class="p-4">Selecciona una materia arriba para ver el reporte</th></tr>
+                        </thead>
+                        <tbody class="text-gray-600" id="matriz-body">
+                        </tbody>
+                    </table>
+                </div>
+                <p id="msg-reporte" class="text-center text-sm text-gray-400 mt-4"></p>
+            </div>
+        </div>
+
+        <div id="view-clases" class="view-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow h-fit border-t-4 border-green-600">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">➕ Nueva Materia</h2>
+                    <form id="form-add-clase">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre de la materia</label>
+                        <input type="text" id="nueva-clase-nombre" required placeholder="Ej: Mecánica de Suelos" class="w-full p-2 border rounded mb-3">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Código (Opcional)</label>
+                        <input type="text" id="nueva-clase-id" placeholder="Ej: CIV-302" class="w-full p-2 border rounded mb-4">
+                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Guardar Materia</button>
+                    </form>
+                </div>
                 <div class="bg-white p-6 rounded-lg shadow">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">📚 Mis Materias</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">📚 Mis Materias Activas</h2>
                     <ul id="lista-clases" class="space-y-2">
                         <li class="text-gray-400 text-sm italic">Cargando...</li>
                     </ul>
@@ -153,29 +178,27 @@
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { doc, getDoc, getDocs, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- VARIABLES GLOBALES ---
+        // Variables Globales
         let usuarioActual = null;
-        let listaMisClases = [];
         let intervaloQR;
         let qrGenerator;
         let claseActiva = null;
 
-        // --- INICIALIZACIÓN ---
+        // --- INICIO Y NAVEGACIÓN ---
         window.cambiarTab = (tabName) => {
-            // Ocultar todas
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
             
-            // Actualizar estilos botones
             document.querySelectorAll('button[id^="tab-"]').forEach(btn => {
                 btn.classList.remove('tab-active');
                 btn.classList.add('tab-inactive');
             });
-            document.getElementById(`tab-${tabName}`).classList.add('tab-active');
-            document.getElementById(`tab-${tabName}`).classList.remove('tab-inactive');
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            activeBtn.classList.add('tab-active');
+            activeBtn.classList.remove('tab-inactive');
         };
 
-        // --- SEGURIDAD Y CARGA INICIAL ---
+        // --- AUTENTICACIÓN ---
         onAuthStateChanged(auth, async (user) => {
             const loader = document.getElementById('loader');
             const mainBody = document.getElementById('main-body');
@@ -189,8 +212,8 @@
                         loader.classList.add('hidden');
                         mainBody.style.display = "block";
                         
-                        // Cargar datos iniciales
-                        await cargarClases();
+                        await cargarClases(); // Cargar dropdowns
+                        qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
 
                     } else {
                         alert("⛔ Acceso exclusivo para docentes.");
@@ -205,130 +228,93 @@
             }
         });
 
-        // --- LOGOUT ---
         document.getElementById('btn-logout').addEventListener('click', () => {
             signOut(auth).then(() => window.location.href = "index.html");
         });
 
         // ==========================================
-        //  MÓDULO 1: ADMINISTRAR CLASES
+        //  MÓDULO 1: CLASES (DROPDOWNS)
         // ==========================================
-        
-        // 1. Cargar clases de Firestore
         async function cargarClases() {
             const listaUl = document.getElementById('lista-clases');
-            const selectQr = document.getElementById('select-clase-qr');
-            const selectFiltro = document.getElementById('filtro-clase');
+            const selects = [
+                document.getElementById('select-clase-qr'),
+                document.getElementById('filtro-clase'),
+                document.getElementById('select-clase-reporte')
+            ];
             
             listaUl.innerHTML = "";
-            selectQr.innerHTML = '<option value="">-- Selecciona una materia --</option>';
-            selectFiltro.innerHTML = '<option value="todas">Todas las materias</option>';
+            selects.forEach(sel => sel.innerHTML = '<option value="">-- Selecciona Materia --</option>');
 
             try {
-                // Buscamos clases creadas por este profesor (usando su UID)
                 const q = query(collection(db, "clases"), where("profesor_uid", "==", usuarioActual.uid));
                 const querySnapshot = await getDocs(q);
                 
-                listaMisClases = [];
-                
-                if(querySnapshot.empty) {
-                    listaUl.innerHTML = '<li class="text-gray-500 text-sm">Aún no has agregado materias.</li>';
-                }
+                if(querySnapshot.empty) listaUl.innerHTML = '<li class="text-gray-500 text-sm">Sin materias. Crea una nueva a la derecha.</li>';
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const claseObj = { id: doc.id, ...data };
-                    listaMisClases.push(claseObj);
-
-                    // A) Agregar a la lista visual
+                    
+                    // Lista visual
                     const li = document.createElement('li');
-                    li.className = "flex justify-between items-center bg-gray-50 p-3 rounded border";
+                    li.className = "flex justify-between items-center bg-gray-50 p-3 rounded border hover:bg-blue-50 transition";
                     li.innerHTML = `
-                        <div>
-                            <p class="font-bold text-gray-800">${data.nombre}</p>
-                            <p class="text-xs text-gray-500">${data.codigo || 'Sin código'}</p>
-                        </div>
-                        <button onclick="eliminarClase('${doc.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold">🗑️</button>
+                        <div><p class="font-bold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.codigo || ''}</p></div>
+                        <button onclick="eliminarClase('${doc.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 p-1 rounded">Eliminar</button>
                     `;
                     listaUl.appendChild(li);
 
-                    // B) Agregar a los Selects (Dropdowns)
-                    const option1 = new Option(data.nombre, data.nombre); // Guardamos el Nombre como valor para el QR
-                    selectQr.add(option1);
-
-                    const option2 = new Option(data.nombre, data.nombre);
-                    selectFiltro.add(option2);
+                    // Dropdowns
+                    selects.forEach(sel => {
+                        const opt = new Option(data.nombre, data.nombre);
+                        sel.add(opt);
+                    });
                 });
-
-            } catch (e) {
-                console.error("Error cargando clases:", e);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // 2. Crear nueva clase
         document.getElementById('form-add-clase').addEventListener('submit', async (e) => {
             e.preventDefault();
             const nombre = document.getElementById('nueva-clase-nombre').value;
             const codigo = document.getElementById('nueva-clase-id').value;
-            const btn = e.target.querySelector('button');
-
+            
             try {
-                btn.innerText = "Guardando...";
-                btn.disabled = true;
-
                 await addDoc(collection(db, "clases"), {
-                    nombre: nombre,
-                    codigo: codigo,
-                    profesor_uid: usuarioActual.uid,
-                    creado: serverTimestamp()
+                    nombre, codigo, profesor_uid: usuarioActual.uid, creado: serverTimestamp()
                 });
-
-                // Reset y recargar
                 document.getElementById('nueva-clase-nombre').value = "";
                 document.getElementById('nueva-clase-id').value = "";
-                alert("Materia agregada correctamente.");
-                await cargarClases();
-
-            } catch (error) {
-                alert("Error al guardar: " + error.message);
-            } finally {
-                btn.innerText = "Guardar Materia";
-                btn.disabled = false;
-            }
+                alert("Materia agregada.");
+                cargarClases();
+            } catch (error) { alert("Error: " + error.message); }
         });
 
-        // 3. Eliminar clase (Función global para el onclick del HTML)
         window.eliminarClase = async (id) => {
-            if(confirm("¿Seguro que deseas eliminar esta materia?")) {
+            if(confirm("¿Eliminar materia? Esto no borrará las asistencias pasadas.")) {
                 await deleteDoc(doc(db, "clases", id));
                 cargarClases();
             }
         };
 
-
         // ==========================================
-        //  MÓDULO 2: GENERADOR QR
+        //  MÓDULO 2: QR
         // ==========================================
-        
-        qrGenerator = new QRious({
-            element: document.getElementById('qrcode'),
-            size: 250,
-            value: '' 
-        });
-
         document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
             const nombreClase = document.getElementById('select-clase-qr').value;
-            if(!nombreClase) return alert("Por favor, selecciona una materia primero.");
+            if(!nombreClase) return alert("Selecciona una materia");
 
             claseActiva = nombreClase;
             document.getElementById('titulo-clase-activa').innerText = nombreClase;
-            
-            // UI Toggle
             document.getElementById('selector-clase-container').classList.add('hidden');
             document.getElementById('panel-qr-activo').classList.remove('hidden');
 
             generarQR();
-            intervaloQR = setInterval(actualizarCiclo, 1000);
+            intervaloQR = setInterval(() => {
+                let s = parseInt(document.getElementById('contador').innerText);
+                s--;
+                document.getElementById('contador').innerText = s;
+                if(s <= 0) { generarQR(); document.getElementById('contador').innerText = 10; }
+            }, 1000);
         });
 
         window.detenerClase = () => {
@@ -338,101 +324,174 @@
             claseActiva = null;
         };
 
-        let segundos = 10;
-        function actualizarCiclo() {
-            segundos--;
-            document.getElementById('contador').innerText = segundos;
-            if (segundos <= 0) {
-                generarQR();
-                segundos = 10;
-            }
-        }
-
         function generarQR() {
             if(!claseActiva) return;
             const data = JSON.stringify({
-                id: claseActiva, // Enviamos el nombre de la materia como ID
-                t: new Date().getTime(),
-                s: Math.random().toString(36).substring(7)
+                id: claseActiva, t: new Date().getTime(), s: Math.random().toString(36).substring(7)
             });
             qrGenerator.value = data;
         }
 
-
         // ==========================================
-        //  MÓDULO 3: HISTORIAL (CONSULTAS)
+        //  MÓDULO 3: HISTORIAL SIMPLE
         // ==========================================
-        
         window.consultarAsistencias = async () => {
             const filtroClase = document.getElementById('filtro-clase').value;
-            const filtroFecha = document.getElementById('filtro-fecha').value; // Formato YYYY-MM-DD
+            const filtroFecha = document.getElementById('filtro-fecha').value;
             const tbody = document.getElementById('tabla-body');
-
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-blue-500 font-bold">Buscando...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-blue-500 font-bold">Buscando...</td></tr>';
 
             try {
-                // Consulta base
-                // Nota: Firestore tiene limitaciones con filtros múltiples sin índices compuestos.
-                // Para simplificar, traeremos las últimas asistencias y filtraremos en JS si es necesario,
-                // o usaremos un filtro simple.
-                
                 let q = query(collection(db, "asistencias"), orderBy("timestamp", "desc"));
-                
-                if (filtroClase !== "todas") {
-                    q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
-                }
-                // (Nota: Si te sale error de índice en consola, Firebase te dará un link para crearlo automáticamente).
+                if (filtroClase) q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
 
                 const snapshot = await getDocs(q);
-                
                 tbody.innerHTML = "";
                 let count = 0;
 
-                if (snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No se encontraron registros.</td></tr>';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    let fechaRegistro = "---";
+                    let fechaFiltro = "";
+
+                    if (data.timestamp) {
+                        const d = data.timestamp.toDate();
+                        fechaRegistro = d.toLocaleString();
+                        fechaFiltro = d.toISOString().split('T')[0];
+                    }
+
+                    if (!filtroFecha || filtroFecha === fechaFiltro) {
+                        count++;
+                        tbody.innerHTML += `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4">${fechaRegistro}</td>
+                                <td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td>
+                                <td class="px-6 py-4">${data.alumno.matricula}</td>
+                                <td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td>
+                            </tr>
+                        `;
+                    }
+                });
+                if(count === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay datos.</td></tr>';
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500">Error: ${e.message} (Intenta crear el índice si es la primera vez)</td></tr>`;
+            }
+        };
+
+        // ==========================================
+        //  MÓDULO 4: SÁBANA DE ASISTENCIA (MATRIZ)
+        // ==========================================
+        window.generarMatrizAsistencia = async () => {
+            const materia = document.getElementById('select-clase-reporte').value;
+            const thead = document.getElementById('matriz-head');
+            const tbody = document.getElementById('matriz-body');
+            const msg = document.getElementById('msg-reporte');
+
+            if(!materia) return alert("Selecciona una materia primero.");
+
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">Procesando datos...</td></tr>';
+            
+            try {
+                // 1. Obtener todas las asistencias de la materia
+                const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia));
+                const snapshot = await getDocs(q);
+
+                if(snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">No hay registros para esta materia aún.</td></tr>';
+                    thead.innerHTML = '';
                     return;
                 }
 
+                // 2. Procesar Datos (Pivote)
+                const fechasSet = new Set(); // Para columnas únicas
+                const alumnosMap = {}; // Para filas únicas
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    
-                    // Filtrado de FECHA manual (JavaScript) porque Firestore no permite buscar por substring de fecha fácil
-                    let mostrar = true;
-                    let fechaStr = "---";
-                    
-                    if (data.timestamp) {
-                        const dateObj = data.timestamp.toDate();
-                        fechaStr = dateObj.toLocaleString();
-                        
-                        if (filtroFecha) {
-                            // Comparar YYYY-MM-DD
-                            const fechaRegistro = dateObj.toISOString().split('T')[0];
-                            if (fechaRegistro !== filtroFecha) mostrar = false;
-                        }
-                    }
+                    // Fecha formateada YYYY-MM-DD
+                    const fechaObj = data.timestamp.toDate();
+                    const fechaStr = fechaObj.toISOString().split('T')[0];
+                    const fechaDisplay = `${fechaObj.getDate()}/${fechaObj.getMonth()+1}`;
 
-                    if (mostrar) {
-                        count++;
-                        const row = `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4">${fechaStr}</td>
-                                <td class="px-6 py-4 font-medium text-gray-900">${data.alumno.nombre || 'Anon'}</td>
-                                <td class="px-6 py-4">${data.alumno.matricula || '---'}</td>
-                                <td class="px-6 py-4 text-blue-600">${data.id_sesion}</td>
-                                <td class="px-6 py-4"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">Presente</span></td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
+                    // Guardamos la fecha (clave para ordenamiento)
+                    fechasSet.add(fechaStr);
+
+                    // Guardamos alumno
+                    const matricula = data.alumno.matricula;
+                    const nombre = data.alumno.nombre;
+                    
+                    if(!alumnosMap[matricula]) {
+                        alumnosMap[matricula] = {
+                            nombre: nombre,
+                            asistencias: new Set() // Usamos Set para que si checa 2 veces el mismo día, solo cuente 1
+                        };
                     }
+                    alumnosMap[matricula].asistencias.add(fechaStr);
                 });
 
-                if(count === 0) {
-                     tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay asistencias en esa fecha.</td></tr>';
-                }
+                // 3. Ordenar Fechas (Columnas)
+                const fechasOrdenadas = Array.from(fechasSet).sort();
+                const totalClases = fechasOrdenadas.length;
 
-            } catch (error) {
-                console.error(error);
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error (Revisa consola): ${error.message}</td></tr>`;
+                // 4. Construir Cabecera (Header)
+                let headerHTML = `<tr>
+                    <th class="bg-gray-200 sticky left-0 z-10 w-64 text-left">ALUMNO</th>
+                    <th class="bg-blue-100 text-blue-800">%</th>`;
+                
+                fechasOrdenadas.forEach(fechaISO => {
+                    // Convertir 2024-01-05 a 5/1 para ahorrar espacio
+                    const partes = fechaISO.split('-');
+                    headerHTML += `<th class="bg-gray-100 min-w-[50px]">${partes[2]}/${partes[1]}</th>`;
+                });
+                headerHTML += '</tr>';
+                thead.innerHTML = headerHTML;
+
+                // 5. Construir Cuerpo (Body)
+                tbody.innerHTML = "";
+                
+                // Ordenar alumnos alfabéticamente
+                const matriculasOrdenadas = Object.keys(alumnosMap).sort((a,b) => 
+                    alumnosMap[a].nombre.localeCompare(alumnosMap[b].nombre)
+                );
+
+                matriculasOrdenadas.forEach(mat => {
+                    const alumno = alumnosMap[mat];
+                    const diasAsistidos = alumno.asistencias.size;
+                    
+                    // Cálculo de porcentaje
+                    let porcentaje = 0;
+                    if(totalClases > 0) porcentaje = Math.round((diasAsistidos / totalClases) * 100);
+
+                    // Color del porcentaje
+                    let colorPorc = "text-gray-700";
+                    if(porcentaje < 80) colorPorc = "text-red-600 font-bold";
+                    if(porcentaje === 100) colorPorc = "text-green-600 font-bold";
+
+                    let rowHTML = `<tr class="hover:bg-gray-50 transition">
+                        <td class="sticky left-0 bg-white border-r text-left font-bold text-gray-700 px-3 py-2 text-xs md:text-sm whitespace-nowrap">
+                            ${alumno.nombre} <br><span class="text-gray-400 font-normal text-xs">${mat}</span>
+                        </td>
+                        <td class="${colorPorc} border-r bg-blue-50">${porcentaje}%</td>`;
+
+                    // Celdas por fecha
+                    fechasOrdenadas.forEach(fecha => {
+                        if(alumno.asistencias.has(fecha)) {
+                            rowHTML += `<td class="bg-cell-present">1</td>`;
+                        } else {
+                            rowHTML += `<td class="bg-cell-absent">0</td>`;
+                        }
+                    });
+
+                    rowHTML += `</tr>`;
+                    tbody.innerHTML += rowHTML;
+                });
+
+                msg.innerText = `Mostrando ${matriculasOrdenadas.length} alumnos en ${totalClases} días de clase.`;
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-red-500 p-4">Error generando reporte: ${e.message}</td></tr>`;
             }
         };
 

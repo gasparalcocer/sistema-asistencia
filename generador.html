@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profesor - Generador de Asistencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full">
+        <h1 class="text-2xl font-bold mb-4 text-blue-900">UADY - Asistencia</h1>
+        
+        <div id="config-panel">
+            <label class="block text-left text-sm font-medium text-gray-700 mb-1">ID de la Clase</label>
+            <input type="text" id="classIdInput" placeholder="GEO-2024" class="w-full p-2 border rounded mb-4" value="CLASE-PRUEBA">
+            <button id="btnIniciar" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
+                Iniciar Sesión
+            </button>
+        </div>
+
+        <div id="qr-panel" class="hidden">
+            <p class="text-gray-600 mb-2">Escanea para registrar asistencia</p>
+            
+            <canvas id="qrcode" class="mx-auto mb-4 border p-2 rounded"></canvas>
+            
+            <div class="text-sm text-gray-500">
+                Actualizando en: <span id="contador" class="font-bold text-red-500">10</span> s
+            </div>
+            
+            <p class="text-xs text-gray-400 mt-4 break-all hidden" id="debug-text"></p>
+
+            <button onclick="location.reload()" class="mt-6 text-sm text-red-400 hover:text-red-600 underline">
+                Terminar Sesión
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Variables de estado
+        let intervaloQR;
+        let qrGenerator; // Instancia de la nueva librería
+        let segundosRestantes = 10;
+        let claseId = "";
+
+        // Elementos del DOM
+        const btnIniciar = document.getElementById('btnIniciar');
+        const configPanel = document.getElementById('config-panel');
+        const qrPanel = document.getElementById('qr-panel');
+        const contadorEl = document.getElementById('contador');
+        const debugText = document.getElementById('debug-text');
+
+        // Inicializamos la librería QRious vacía vinculada al Canvas
+        // Esto asegura que la librería carga correctamente desde el inicio
+        qrGenerator = new QRious({
+            element: document.getElementById('qrcode'),
+            size: 250,
+            value: '' 
+        });
+
+        btnIniciar.addEventListener('click', () => {
+            claseId = document.getElementById('classIdInput').value;
+            if(!claseId) return alert("Escribe un nombre para la clase");
+
+            // Cambio de interfaz
+            configPanel.classList.add('hidden');
+            qrPanel.classList.remove('hidden');
+
+            // Generar primero e iniciar ciclo
+            generarQR();
+            iniciarCiclo();
+        });
+
+        function iniciarCiclo() {
+            // Aseguramos que no haya intervalos duplicados
+            if (intervaloQR) clearInterval(intervaloQR);
+
+            intervaloQR = setInterval(() => {
+                segundosRestantes--;
+                contadorEl.innerText = segundosRestantes;
+
+                if (segundosRestantes <= 0) {
+                    generarQR();
+                    segundosRestantes = 10; 
+                    contadorEl.innerText = 10;
+                }
+            }, 1000);
+        }
+
+        function generarQR() {
+            const tiempoActual = new Date().getTime();
+            
+            // Datos del QR (Token)
+            const datosQR = JSON.stringify({
+                id: claseId,
+                t: tiempoActual,
+                s: Math.random().toString(36).substring(7) 
+            });
+
+            // ACTUALIZAR EL QR
+            // Con esta librería solo actualizamos el valor .value y se redibuja solo
+            qrGenerator.value = datosQR;
+
+            // Debug visual (opcional)
+            console.log("Nuevo Token generado:", datosQR);
+            debugText.innerText = datosQR;
+        }
+    </script>
+</body>
+</html>

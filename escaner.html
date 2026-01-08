@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alumno - Registrar Asistencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="bg-blue-50 flex flex-col items-center min-h-screen p-4">
+
+    <div class="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden mt-4">
+        <div class="bg-blue-800 p-4 text-white text-center">
+            <h1 class="text-xl font-bold">Registro de Asistencia</h1>
+            <p class="text-xs opacity-75">Universidad Autónoma de Yucatán</p>
+        </div>
+
+        <div class="p-6">
+            <div id="step-1">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tu Matrícula</label>
+                <input type="text" id="matricula" placeholder="A12345678" class="w-full p-3 border rounded-lg mb-4 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tu Nombre Completo</label>
+                <input type="text" id="nombre" placeholder="Nombre Apellido" class="w-full p-3 border rounded-lg mb-6 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                
+                <button id="btn-continuar" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">
+                    Activar Cámara
+                </button>
+            </div>
+
+            <div id="step-2" class="hidden">
+                <p class="text-sm text-center text-gray-500 mb-2">Apunta al código del profesor</p>
+                <div id="reader" class="w-full bg-black rounded-lg overflow-hidden" style="min-height: 250px;"></div>
+                <button onclick="location.reload()" class="mt-4 w-full text-gray-500 text-sm underline">Cancelar</button>
+            </div>
+
+            <div id="status-msg" class="hidden mt-4 p-3 rounded text-center text-sm"></div>
+        </div>
+    </div>
+<script type="module">
+        import { db, collection, addDoc, serverTimestamp } from './firebase-config.js';
+
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const statusMsg = document.getElementById('status-msg');
+        let html5QrcodeScanner;
+
+        // --- CONFIGURACIÓN ANTIFRAUDE ---
+        const DISTANCIA_MAXIMA_METROS = 50; // Radio permitido
+        const TIEMPO_MAXIMO_QR_SEGUNDOS = 60; // Vida útil del QR
+        
+        // COORDENADAS DEL SALÓN (Ejemplo: FIUADY)
+        // Puedes sacarlas de Google Maps (clic derecho > ¿Qué hay aquí?)
+        const LAT_SALON = 21.0483; 
+        const LNG_SALON = -89.6433; 
+        // --------------------------------
+
+        document.getElementById('btn-continuar').addEventListener('click', async () => {
+            const matricula = document.getElementById('matricula').value;
+            const nombre = document.getElementById('nombre').value;
+            if (!matricula || !nombre) return alert("Completa tus datos.");
+
+            step1.classList.add('hidden');
+            step2.classList.remove('hidden');
+            iniciarEscaner(matricula, nombre);
+        });
+
+        function iniciarEscaner(matricula, nombre) {
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render((decodedText) => onScanSuccess(decodedText, matricula, nombre), (errorMessage) => {});
+        }
+
+        async function onScanSuccess(decodedText, matricula, nombre) {
+            html5QrcodeScanner.clear();
+            step2.innerHTML = '<div class="text-center py-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto"></div><p class="mt-4 text-gray-600">Validando ubicación y seguridad...</p></div>';
+
+            try {
+                const dataQR = JSON.parse(decodedText);
+                
+                // 1. VALIDACIÓN DE TIEMPO (¿Es un QR viejo?)
+                const ahora = new Date().getTime();
+                const diferenciaTiempo = (ahora - dataQR.t) / 1000; // Segundos
+                
+                if (diferenciaTiempo > TIEMPO_MAXIMO_QR_SEGUNDOS) {
+                    throw new Error("El código QR ha expirado. Escanea uno nuevo.");
+                }
+
+                // 2. OBTENER GPS
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const latAlumno = position.coords.latitude;
+                        const lngAlumno = position.coords.longitude;
+
+                        // 3. VALIDACIÓN DE DISTANCIA (Fórmula Haversine)
+                        const distancia = calcularDistancia(LAT_SALON, LNG_SALON, latAlumno, lngAlumno);
+                        
+                        if (distancia > DISTANCIA_MAXIMA_METROS) {
+                            mostrarError(`Estás demasiado lejos del salón (${distancia.toFixed(1)}m). Acércate para registrar.`);
+                        } else {
+                            // SI PASA TODAS LAS PRUEBAS -> ENVIAR
+                            await enviarAsistencia(matricula, nombre, dataQR, position.coords, distancia);
+                        }
+                    },
+                    (error) => mostrarError("Activa tu ubicación para continuar.")
+                );
+
+            } catch (e) {
+                mostrarError(e.message || "Código inválido");
+            }
+        }
+
+        // Fórmula matemática para calcular distancia entre dos coordenadas en la Tierra
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Radio de la tierra en metros
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // Resultado en metros
+        }
+
+        async function enviarAsistencia(matricula, nombre, dataQR, coords, dist) {
+            try {
+                await addDoc(collection(db, "asistencias"), {
+                    id_sesion: dataQR.id,
+                    qr_token: dataQR.t,
+                    alumno: { matricula, nombre },
+                    ubicacion: { lat: coords.latitude, lng: coords.longitude, dist_calculada: dist },
+                    timestamp: serverTimestamp(),
+                    device: navigator.userAgent
+                });
+                mostrarExito("Asistencia Validada y Registrada");
+            } catch (e) {
+                mostrarError("Error de conexión con la base de datos.");
+            }
+        }
+
+        function mostrarError(msg) {
+            statusMsg.innerHTML = `⚠️ ${msg}`;
+            statusMsg.className = "mt-4 p-3 rounded text-center text-sm bg-red-100 text-red-700 block font-bold";
+            // Botón para reintentar
+            step2.innerHTML += `<button onclick="location.reload()" class="mt-4 w-full text-blue-600 underline">Intentar de nuevo</button>`;
+        }
+
+        function mostrarExito(msg) {
+            step2.innerHTML = `<div class="text-center py-6"><div class="text-5xl text-green-500 mb-2">✓</div><h2 class="text-xl font-bold text-gray-800">¡Listo!</h2><p class="text-gray-600">${msg}</p></div>`;
+        }
+    </script>
+</body>
+</html>

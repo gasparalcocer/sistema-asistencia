@@ -1,10 +1,10 @@
-// NOMBRE DEL ARCHIVO: firebase-config.js
+// IMPORTANTE: NO BORRES TUS API KEYS, SOLO COPIA LA ESTRUCTURA
 
-// Importar las funciones del SDK de Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// 1. Agregamos esta línea para importar la Autenticación
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"; 
 
-// --- AQUÍ PEGA TUS DATOS DEL PASO 3 ---
 const firebaseConfig = {
   apiKey: "AIzaSyDc2vnoZwiA2ccfumgSpnxqH_SOe6oxYRQ",
   authDomain: "asistencia-qr-gaag.firebaseapp.com",
@@ -15,9 +15,12 @@ const firebaseConfig = {
 };
 // ---------------------------------------
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Exportar para usar en otros archivos
-export { db, collection, addDoc, serverTimestamp };
+// 2. Inicializamos la autenticación
+const auth = getAuth(app); 
+
+// 3. Exportamos 'auth' para que login.html pueda usarlo
+export { db, auth, collection, addDoc, serverTimestamp };
+

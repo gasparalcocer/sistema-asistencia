@@ -15,35 +15,49 @@
 
     <div id="pantalla-carga" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-900 mb-4"></div>
-        <p class="text-blue-900 font-bold">Cargando tu perfil...</p>
+        <p class="text-blue-900 font-bold text-lg">Verificando sesión...</p>
+        <p class="text-gray-400 text-xs mt-2">Acceso restringido</p>
     </div>
 
     <div id="interfaz-principal" class="hidden w-full max-w-md">
         
-        <div class="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-900">
-            <p class="text-xs text-gray-500 uppercase">Bienvenido, Alumno</p>
-            <h2 id="user-nombre" class="text-lg font-bold text-gray-800">Cargando...</h2>
-            <p id="user-matricula" class="text-sm text-blue-600 font-mono font-bold">...</p>
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-900 flex justify-between items-center">
+            <div>
+                <p class="text-xs text-gray-500 uppercase">Bienvenido, Alumno</p>
+                <h2 id="user-nombre" class="text-lg font-bold text-gray-800">Cargando...</h2>
+                <p id="user-matricula" class="text-sm text-blue-600 font-mono font-bold">...</p>
+            </div>
+            <button id="btn-cerrar-sesion" class="text-xs bg-red-50 text-red-600 px-3 py-2 rounded border border-red-100 hover:bg-red-100 font-bold transition">
+                Cerrar Sesión
+            </button>
         </div>
 
         <div class="bg-white rounded-lg shadow-xl overflow-hidden">
-            <div class="bg-blue-900 p-3 text-white text-center flex justify-between items-center">
-                <h1 class="text-lg font-bold">Escaner de Asistencia</h1>
-                <button id="btn-cerrar-sesion" class="text-xs bg-red-500 px-2 py-1 rounded hover:bg-red-600">Salir</button>
+            <div class="bg-blue-900 p-3 text-white text-center">
+                <h1 class="text-lg font-bold">Registrar Asistencia</h1>
             </div>
 
             <div class="p-4">
                 <div id="step-scan">
-                    <p class="text-xs text-center text-gray-500 mb-2">Apunta al código QR del profesor</p>
-                    <div id="reader"></div>
-                    <div id="msg-status" class="mt-4 text-center text-sm font-bold text-gray-600">Cámara lista</div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">1. Elige la materia</label>
+                        <select id="select-materia" class="w-full p-3 border-2 border-blue-100 rounded-lg bg-gray-50 focus:border-blue-500 focus:outline-none text-gray-800 font-medium">
+                            <option value="">-- Cargando materias... --</option>
+                        </select>
+                    </div>
+
+                    <p class="text-xs font-bold text-gray-500 mb-2 uppercase">2. Escanea el código</p>
+                    <div id="reader" class="mb-2"></div>
+                    <div id="msg-status" class="mt-2 text-center text-sm font-bold text-gray-600">Cámara en espera...</div>
                 </div>
 
                 <div id="step-result" class="hidden text-center py-6">
                     <div id="icon-result" class="text-5xl mb-2"></div>
                     <h2 id="title-result" class="text-xl font-bold"></h2>
-                    <p id="desc-result" class="text-gray-600 text-sm"></p>
-                    <button onclick="location.reload()" class="mt-6 text-blue-600 underline text-sm">Escanear otro</button>
+                    <p id="desc-result" class="text-gray-600 text-sm mb-4"></p>
+                    <button onclick="location.reload()" class="bg-blue-600 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-blue-700 transition">
+                        Escanear otra vez
+                    </button>
                 </div>
             </div>
         </div>
@@ -52,91 +66,123 @@
     <script type="module">
         import { db, auth, collection, addDoc, serverTimestamp } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN ---
         const DISTANCIA_MAXIMA_METROS = 200; 
         const TIEMPO_MAXIMO_QR_SEGUNDOS = 120;
-        // Coordenadas UADY (FIUADY)
         const LAT_SALON = 21.0483; 
         const LNG_SALON = -89.6433; 
 
-        // Variables Globales del Usuario
+        // Variables Globales
         let datosUsuario = { nombre: '', matricula: '' };
         let html5QrCode;
 
         // Elementos DOM
         const pantallaCarga = document.getElementById('pantalla-carga');
         const interfazPrincipal = document.getElementById('interfaz-principal');
-        const txtNombre = document.getElementById('user-nombre');
-        const txtMatricula = document.getElementById('user-matricula');
-        const stepScan = document.getElementById('step-scan');
-        const stepResult = document.getElementById('step-result');
+        const selectMateria = document.getElementById('select-materia');
         const msgStatus = document.getElementById('msg-status');
 
-        // 1. VERIFICAR SESIÓN Y CARGAR DATOS
+        // --- EL FILTRO DE SEGURIDAD ---
+        // Esta función se ejecuta automáticamente al cargar la página
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // CASO 1: USUARIO AUTENTICADO
+                console.log("Sesión válida:", user.email);
+                
                 try {
-                    // Buscar datos extra en Firestore (nombre, matricula)
+                    // 1. Cargamos sus datos de perfil (Firestore)
                     const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+                    
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        datosUsuario.nombre = data.nombre;
-                        datosUsuario.matricula = data.matricula;
+                        datosUsuario = { nombre: data.nombre, matricula: data.matricula };
                         
-                        // Mostrar en interfaz
-                        txtNombre.innerText = datosUsuario.nombre;
-                        txtMatricula.innerText = datosUsuario.matricula;
+                        // Llenar interfaz
+                        document.getElementById('user-nombre').innerText = data.nombre;
+                        document.getElementById('user-matricula').innerText = data.matricula || "Sin matrícula";
                         
-                        // Mostrar interfaz
+                        // 2. Cargar las materias disponibles
+                        await cargarListaMaterias();
+
+                        // 3. Quitar pantalla de carga y mostrar app
                         pantallaCarga.classList.add('hidden');
                         interfazPrincipal.classList.remove('hidden');
                         
-                        // Iniciar cámara automáticamente
+                        // 4. Encender cámara
                         iniciarCamara();
                     } else {
-                        alert("Error: Perfil de usuario incompleto.");
+                        alert("Error: No encontramos tu perfil de alumno.");
+                        window.location.href = "login.html";
                     }
                 } catch (e) {
-                    console.error(e);
-                    alert("Error al cargar perfil.");
+                    console.error("Error cargando datos:", e);
+                    alert("Error de conexión. Intenta recargar.");
                 }
+
             } else {
-                window.location.href = "login.html";
+                // CASO 2: INTRUSO (NO LOGUEADO)
+                console.warn("Acceso denegado. Redirigiendo...");
+                window.location.href = "login.html"; // <--- AQUÍ ESTÁ EL FILTRO
             }
         });
 
-        // Botón Cerrar Sesión
+        // --- FUNCIONES DEL SISTEMA ---
+
+        async function cargarListaMaterias() {
+            selectMateria.innerHTML = '<option value="">-- Selecciona una materia --</option>';
+            try {
+                const querySnapshot = await getDocs(collection(db, "clases"));
+                if (querySnapshot.empty) {
+                    selectMateria.innerHTML = '<option value="">No hay clases registradas</option>';
+                    return;
+                }
+                querySnapshot.forEach((doc) => {
+                    const clase = doc.data();
+                    const option = document.createElement('option');
+                    option.value = clase.nombre; 
+                    option.text = clase.nombre + (clase.codigo ? ` (${clase.codigo})` : '');
+                    selectMateria.appendChild(option);
+                });
+            } catch (e) {
+                console.error("Error cargando clases:", e);
+            }
+        }
+
         document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
-            signOut(auth).then(() => window.location.href = "index.html");
+            const confirmar = confirm("¿Deseas cerrar sesión?");
+            if(confirmar) {
+                signOut(auth).then(() => window.location.href = "index.html");
+            }
         });
 
         function iniciarCamara() {
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err)=>{})
-            .catch(err => {
-                msgStatus.innerText = "Error: No se pudo abrir la cámara trasera.";
-                // Intentar cámara frontal si falla
-                html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, (err)=>{});
-            });
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err)=>{});
         }
 
         async function onScanSuccess(decodedText) {
-            html5QrCode.pause(); // Congelar cámara
-            msgStatus.innerText = "Procesando código...";
+            const materiaSeleccionada = selectMateria.value;
+            if (!materiaSeleccionada) {
+                alert("⚠️ Por favor selecciona la materia en la lista de arriba.");
+                return;
+            }
+
+            html5QrCode.pause();
+            msgStatus.innerText = "Procesando...";
             
             try {
                 const dataQR = JSON.parse(decodedText);
 
-                // 1. Validar Tiempo
+                // Validaciones
+                if (dataQR.id !== materiaSeleccionada) throw new Error(`Materia incorrecta.<br>Tu selección: <b>${materiaSeleccionada}</b><br>QR detectado: <b>${dataQR.id}</b>`);
+                
                 const ahora = new Date().getTime();
-                if ((ahora - dataQR.t) / 1000 > TIEMPO_MAXIMO_QR_SEGUNDOS) throw new Error("El código QR ha caducado.");
+                if ((ahora - dataQR.t) / 1000 > TIEMPO_MAXIMO_QR_SEGUNDOS) throw new Error("Código QR caducado.");
 
-                // 2. Validar GPS
-                if (!navigator.geolocation) throw new Error("Tu dispositivo no tiene GPS.");
+                if (!navigator.geolocation) throw new Error("GPS requerido.");
                 
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const dist = calcularDistancia(LAT_SALON, LNG_SALON, pos.coords.latitude, pos.coords.longitude);
@@ -144,20 +190,20 @@
                     if (dist > DISTANCIA_MAXIMA_METROS) {
                         mostrarResultado(false, "Ubicación Incorrecta", `Estás a ${dist.toFixed(0)}m del salón.`);
                     } else {
-                        // ENVIAR A FIREBASE
+                        // ÉXITO
                         await addDoc(collection(db, "asistencias"), {
                             id_sesion: dataQR.id,
                             qr_token: dataQR.t,
-                            alumno: datosUsuario, // <--- Usamos los datos cargados del perfil
+                            alumno: datosUsuario,
                             ubicacion: { lat: pos.coords.latitude, lng: pos.coords.longitude },
                             timestamp: serverTimestamp(),
                             dispositivo: navigator.userAgent
                         });
-                        mostrarResultado(true, "Asistencia Registrada", "Tus datos se guardaron correctamente.");
+                        mostrarResultado(true, "Asistencia Registrada", `Clase: ${materiaSeleccionada}`);
                         html5QrCode.stop();
                     }
                 }, (err) => {
-                    mostrarResultado(false, "Error GPS", "Debes activar tu ubicación.");
+                    mostrarResultado(false, "Error GPS", "Activa tu ubicación.");
                 });
 
             } catch (e) {
@@ -166,8 +212,8 @@
         }
 
         function mostrarResultado(exito, titulo, desc) {
-            stepScan.classList.add('hidden');
-            stepResult.classList.remove('hidden');
+            document.getElementById('step-scan').classList.add('hidden');
+            document.getElementById('step-result').classList.remove('hidden');
             
             const icon = document.getElementById('icon-result');
             const title = document.getElementById('title-result');
@@ -176,15 +222,14 @@
             if(exito) {
                 icon.innerHTML = "✅";
                 icon.className = "text-5xl mb-2 text-green-500";
-                title.innerText = titulo;
                 title.className = "text-xl font-bold text-green-700";
             } else {
                 icon.innerHTML = "❌";
                 icon.className = "text-5xl mb-2 text-red-500";
-                title.innerText = titulo;
                 title.className = "text-xl font-bold text-red-700";
             }
-            txt.innerText = desc;
+            title.innerText = titulo;
+            txt.innerHTML = desc;
         }
 
         function calcularDistancia(lat1, lon1, lat2, lon2) {

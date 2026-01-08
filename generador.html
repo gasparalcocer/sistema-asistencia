@@ -12,8 +12,6 @@
         .table-matrix th, .table-matrix td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-size: 0.85rem; }
         .bg-cell-present { background-color: #dcfce7; color: #166534; font-weight: bold; } 
         .bg-cell-absent { background-color: #fee2e2; color: #991b1b; }
-        
-        /* Animación para nuevos registros */
         @keyframes highlight {
             0% { background-color: #fef08a; transform: scale(1.02); }
             100% { background-color: white; transform: scale(1); }
@@ -62,11 +60,9 @@
 
         <div id="view-qr" class="view-section">
             <div class="bg-white p-6 rounded-lg shadow max-w-4xl mx-auto border-t-4 border-blue-900">
-                
                 <div id="config-qr-container" class="text-center py-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">Pasar Lista</h2>
                     <p class="text-gray-500 mb-6 text-sm">Selecciona una materia para abrir la sesión.</p>
-
                     <div class="max-w-md mx-auto">
                         <label class="block text-left text-sm font-bold text-gray-700 mb-1">Materia</label>
                         <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4 focus:ring-2 focus:ring-blue-500">
@@ -90,38 +86,43 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
-                        <div class="flex flex-col items-center justify-center border-r-0 md:border-r border-gray-200 p-4">
+                        <div class="flex flex-col items-center border-r-0 md:border-r border-gray-200 p-4">
                             <div class="bg-white p-2 inline-block rounded shadow-lg border mb-4">
                                 <canvas id="qrcode"></canvas>
                             </div>
-                            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-6">
                                 Cambia en: <span id="contador" class="font-bold text-blue-600 w-6 inline-block text-center">10</span>s
                             </div>
-                            <p class="text-xs text-gray-400 mt-4 text-center max-w-xs">
-                                Los alumnos deben escanear este código desde su celular.
-                            </p>
+
+                            <div class="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-sm">
+                                <h4 class="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                                    <span>✍️</span> Registro Manual
+                                </h4>
+                                <p class="text-xs text-yellow-600 mb-3">Para alumnos sin celular/internet</p>
+                                <div class="space-y-2">
+                                    <input type="text" id="manual-matricula" placeholder="Matrícula" class="w-full p-2 text-sm border rounded uppercase">
+                                    <input type="text" id="manual-nombre" placeholder="Nombre Completo" class="w-full p-2 text-sm border rounded uppercase">
+                                    <button onclick="registrarManual()" class="w-full bg-yellow-600 text-white text-sm font-bold py-2 rounded hover:bg-yellow-700 transition">
+                                        Registrar Alumno
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="flex flex-col h-[400px]">
+                        <div class="flex flex-col h-[500px]">
                             <div class="flex justify-between items-end mb-2">
                                 <h4 class="font-bold text-gray-700">Asistentes en Sala</h4>
                                 <span id="contador-vivo" class="bg-green-100 text-green-800 text-2xl font-bold px-3 py-1 rounded-lg">0</span>
                             </div>
-                            
                             <div class="flex-1 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden flex flex-col">
                                 <div class="bg-gray-200 px-4 py-2 text-xs font-bold text-gray-500 flex justify-between">
-                                    <span>ALUMNO</span>
-                                    <span>HORA</span>
+                                    <span>ALUMNO</span><span>HORA</span>
                                 </div>
                                 <ul id="lista-asistentes-vivo" class="overflow-y-auto p-2 space-y-2 flex-1">
-                                    <li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">
-                                        Esperando registros...
-                                    </li>
+                                    <li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">Esperando registros...</li>
                                 </ul>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -129,7 +130,12 @@
 
         <div id="view-historial" class="view-section hidden">
             <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Bitácora Diaria</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Bitácora Diaria</h2>
+                    <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold text-sm flex items-center gap-2 shadow transition">
+                        <span>📥</span> Descargar Excel (CSV)
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label class="text-xs font-bold text-gray-500">Materia</label>
@@ -141,22 +147,23 @@
                     </div>
                     <div class="flex items-end">
                         <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">
-                            Buscar
+                            Buscar Registros
                         </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-500">
+                <div class="overflow-x-auto border rounded">
+                    <table class="w-full text-sm text-left text-gray-500" id="tabla-exportable">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
-                                <th class="px-6 py-3">Fecha/Hora</th>
+                                <th class="px-6 py-3">Fecha</th>
+                                <th class="px-6 py-3">Hora</th>
                                 <th class="px-6 py-3">Alumno</th>
                                 <th class="px-6 py-3">Matrícula</th>
                                 <th class="px-6 py-3">Estado</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-body">
-                            <tr><td colspan="4" class="text-center py-4">Selecciona filtros para ver detalles</td></tr>
+                            <tr><td colspan="5" class="text-center py-4">Selecciona filtros para ver detalles</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -168,7 +175,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
                     <div>
                         <h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2>
-                        <p class="text-sm text-gray-500">Sábana de asistencia por fechas</p>
+                        <p class="text-sm text-gray-500">Vista tipo Excel por fechas</p>
                     </div>
                     <div class="mt-4 md:mt-0 flex gap-2">
                         <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]">
@@ -217,36 +224,27 @@
     <script type="module">
         import { auth, db, collection, addDoc, serverTimestamp } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        // IMPORTANTE: Importamos onSnapshot para el tiempo real
         import { doc, getDoc, getDocs, query, where, orderBy, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let usuarioActual = null;
         let intervaloQR;
         let qrGenerator;
         let claseActiva = null;
-        let unsubscribeLive = null; // Guardará la conexión en vivo para cerrarla luego
+        let unsubscribeLive = null;
 
         // --- NAVEGACIÓN ---
         window.cambiarTab = (tabName) => {
-            // Si nos salimos de la pestaña QR, detener la clase por seguridad
             if (claseActiva && tabName !== 'qr') {
-                if(confirm("Salir detendrá la sesión de asistencia actual. ¿Continuar?")) {
-                    detenerClase();
-                } else {
-                    return; // Cancelar cambio de tab
-                }
+                if(confirm("Salir detendrá la sesión actual. ¿Continuar?")) detenerClase();
+                else return;
             }
-            
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            
             document.querySelectorAll('button[id^="tab-"]').forEach(btn => {
-                btn.classList.remove('tab-active');
-                btn.classList.add('tab-inactive');
+                btn.classList.remove('tab-active'); btn.classList.add('tab-inactive');
             });
             const activeBtn = document.getElementById(`tab-${tabName}`);
-            activeBtn.classList.add('tab-active');
-            activeBtn.classList.remove('tab-inactive');
+            activeBtn.classList.add('tab-active'); activeBtn.classList.remove('tab-inactive');
         };
 
         // --- AUTH ---
@@ -263,10 +261,7 @@
                         mainBody.style.display = "block";
                         await cargarClases();
                         qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
-                    } else {
-                        alert("Acceso denegado.");
-                        window.location.href = "index.html";
-                    }
+                    } else { alert("Acceso denegado."); window.location.href = "index.html"; }
                 } catch (e) { console.error(e); }
             } else { window.location.href = "login.html"; }
         });
@@ -275,115 +270,93 @@
             signOut(auth).then(() => window.location.href = "index.html");
         });
 
-        // ============================
-        //  MÓDULO QR EN VIVO
-        // ============================
+        // --- QR VIVO & MANUAL ---
         document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
             const nombreClase = document.getElementById('select-clase-qr').value;
             if(!nombreClase) return alert("Selecciona una materia");
-
-            // 1. UI Switch
             claseActiva = nombreClase;
             document.getElementById('titulo-clase-activa').innerText = nombreClase;
             document.getElementById('config-qr-container').classList.add('hidden');
             document.getElementById('panel-qr-activo').classList.remove('hidden');
-
-            // 2. Iniciar Ciclo QR
             generarQR();
             intervaloQR = setInterval(() => {
-                let s = parseInt(document.getElementById('contador').innerText);
-                s--;
+                let s = parseInt(document.getElementById('contador').innerText); s--;
                 document.getElementById('contador').innerText = s;
                 if(s <= 0) { generarQR(); document.getElementById('contador').innerText = 10; }
             }, 1000);
-
-            // 3. INICIAR MONITOR EN VIVO (onSnapshot)
             iniciarMonitorEnVivo(nombreClase);
         });
 
         window.detenerClase = () => {
-            // Detener QR
             clearInterval(intervaloQR);
-            
-            // Detener Monitor en Vivo
-            if (unsubscribeLive) {
-                unsubscribeLive(); // Cortar conexión con Firebase
-                unsubscribeLive = null;
-            }
-
-            // Reset UI
+            if (unsubscribeLive) { unsubscribeLive(); unsubscribeLive = null; }
             document.getElementById('panel-qr-activo').classList.add('hidden');
             document.getElementById('config-qr-container').classList.remove('hidden');
             claseActiva = null;
             document.getElementById('lista-asistentes-vivo').innerHTML = '<li class="text-center text-gray-400 text-sm py-10 italic">Esperando registros...</li>';
             document.getElementById('contador-vivo').innerText = "0";
+            document.getElementById('manual-matricula').value = "";
+            document.getElementById('manual-nombre').value = "";
+        };
+
+        // --- NUEVA FUNCIÓN DE REGISTRO MANUAL ---
+        window.registrarManual = async () => {
+            const mat = document.getElementById('manual-matricula').value.toUpperCase().trim();
+            const nom = document.getElementById('manual-nombre').value.toUpperCase().trim();
+            
+            if(!mat || !nom) return alert("Por favor escribe la matrícula y el nombre.");
+            
+            try {
+                // Simplemente guardamos en Firebase como si hubiera escaneado
+                await addDoc(collection(db, "asistencias"), {
+                    id_sesion: claseActiva,
+                    qr_token: new Date().getTime(),
+                    alumno: { nombre: nom, matricula: mat },
+                    ubicacion: { lat: 0, lng: 0, manual: true }, // Marcamos como manual
+                    timestamp: serverTimestamp(),
+                    dispositivo: "Registro Manual Docente"
+                });
+                
+                // Limpiamos los campos
+                document.getElementById('manual-matricula').value = "";
+                document.getElementById('manual-nombre').value = "";
+                
+                // No necesitamos alertar éxito, aparecerá en el monitor en vivo automáticamente
+            } catch (e) {
+                alert("Error al registrar: " + e.message);
+            }
         };
 
         function iniciarMonitorEnVivo(materia) {
             const listaEl = document.getElementById('lista-asistentes-vivo');
             const contadorEl = document.getElementById('contador-vivo');
-            const horaInicio = new Date(); // Solo mostrar los que lleguen desde AHORA
-            
-            // Set para contar alumnos únicos en esta sesión (por si escanean doble)
+            const horaInicio = new Date();
             const alumnosUnicos = new Set();
-
-            // Query: Asistencias de esta materia, creadas DESPUÉS de abrir el panel
-            // Nota: Si no tienes el índice compuesto, te saldrá el link en consola. Dale clic.
-            const q = query(
-                collection(db, "asistencias"),
-                where("id_sesion", "==", materia),
-                where("timestamp", ">=", horaInicio),
-                orderBy("timestamp", "desc")
-            );
-
-            // onSnapshot: Escucha cambios en tiempo real
+            const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia), where("timestamp", ">=", horaInicio), orderBy("timestamp", "desc"));
             unsubscribeLive = onSnapshot(q, (snapshot) => {
-                
-                // Si es la primera carga y está vacía
-                if (snapshot.empty) {
-                    // No hacemos nada, dejamos el mensaje de "Esperando..."
-                    return;
-                }
-
+                if (snapshot.empty) return;
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
-                        
-                        // Quitar mensaje de "Esperando..." si es el primero
                         const msgEsperando = document.getElementById('msg-esperando');
                         if(msgEsperando) msgEsperando.remove();
-
-                        // 1. Actualizar Contador Único
                         if (!alumnosUnicos.has(data.alumno.matricula)) {
                             alumnosUnicos.add(data.alumno.matricula);
                             contadorEl.innerText = alumnosUnicos.size;
                         }
-
-                        // 2. Formatear Hora
                         const hora = data.timestamp ? data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : "Reciente";
+                        // Distinguir visualmente si fue manual
+                        const esManual = data.ubicacion && data.ubicacion.manual;
+                        const icon = esManual ? "✍️" : "📱";
+                        const estiloExtra = esManual ? "border-yellow-400 bg-yellow-50" : "border-green-500 bg-white";
 
-                        // 3. Crear Elemento Visual
                         const li = document.createElement('li');
-                        li.className = "flex justify-between items-center bg-white p-3 rounded shadow-sm border-l-4 border-green-500 nuevo-registro";
-                        li.innerHTML = `
-                            <div>
-                                <p class="font-bold text-gray-800 text-sm uppercase">${data.alumno.nombre}</p>
-                                <p class="text-xs text-gray-500">${data.alumno.matricula}</p>
-                            </div>
-                            <span class="text-xs font-mono text-gray-400 font-bold">${hora}</span>
-                        `;
-                        
-                        // Agregar al inicio de la lista
+                        li.className = `flex justify-between items-center p-3 rounded shadow-sm border-l-4 nuevo-registro ${estiloExtra}`;
+                        li.innerHTML = `<div><p class="font-bold text-gray-800 text-sm uppercase">${icon} ${data.alumno.nombre}</p><p class="text-xs text-gray-500">${data.alumno.matricula}</p></div><span class="text-xs font-mono text-gray-400 font-bold">${hora}</span>`;
                         listaEl.prepend(li);
                     }
                 });
-            }, (error) => {
-                console.error("Error monitor en vivo:", error);
-                // Si falla por falta de índice, avisar al profe
-                if(error.message.includes("index")) {
-                    alert("⚠️ Configuración requerida: Mira la consola (F12) y haz clic en el enlace para crear el índice de Firestore.");
-                }
-            });
+            }, (error) => { if(error.message.includes("index")) alert("⚠️ Revisa la consola para crear el índice."); });
         }
 
         function generarQR() {
@@ -392,9 +365,7 @@
             qrGenerator.value = data;
         }
 
-        // ============================
-        //  MÓDULO GESTIÓN CLASES (Igual)
-        // ============================
+        // --- GESTIÓN CLASES ---
         async function cargarClases() {
             const listaUl = document.getElementById('lista-clases');
             const selects = [document.getElementById('select-clase-qr'), document.getElementById('filtro-clase'), document.getElementById('select-clase-reporte')];
@@ -427,14 +398,12 @@
 
         window.eliminarClase = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "clases", id)); cargarClases(); } };
 
-        // ============================
-        //  MÓDULOS HISTORIAL Y REPORTE (Iguales)
-        // ============================
+        // --- HISTORIAL & EXPORTAR ---
         window.consultarAsistencias = async () => {
             const filtroClase = document.getElementById('filtro-clase').value;
             const filtroFecha = document.getElementById('filtro-fecha').value;
             const tbody = document.getElementById('tabla-body');
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-blue-500">Buscando...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-blue-500">Buscando...</td></tr>';
             try {
                 let q = query(collection(db, "asistencias"), orderBy("timestamp", "desc"));
                 if (filtroClase) q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
@@ -442,21 +411,46 @@
                 tbody.innerHTML = ""; let count=0;
                 snap.forEach(doc => {
                     const data = doc.data();
-                    let fechaFiltro = data.timestamp ? data.timestamp.toDate().toISOString().split('T')[0] : "";
+                    const fechaObj = data.timestamp.toDate();
+                    let fechaFiltro = fechaObj.toISOString().split('T')[0];
                     if (!filtroFecha || filtroFecha === fechaFiltro) {
                         count++;
-                        tbody.innerHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-6 py-4">${data.timestamp.toDate().toLocaleString()}</td><td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td><td class="px-6 py-4">${data.alumno.matricula}</td><td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td></tr>`;
+                        tbody.innerHTML += `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4">${fechaObj.toLocaleDateString()}</td>
+                                <td class="px-6 py-4 font-mono text-xs">${fechaObj.toLocaleTimeString()}</td>
+                                <td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td>
+                                <td class="px-6 py-4">${data.alumno.matricula}</td>
+                                <td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td>
+                            </tr>`;
                     }
                 });
-                if(count===0) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay datos.</td></tr>';
-            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="4" class="text-center text-red-500">Error (Revisa consola para crear índice): ${e.message}</td></tr>`; }
+                if(count===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay datos.</td></tr>';
+            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error (crear índice): ${e.message}</td></tr>`; }
         };
 
+        window.exportarCSV = () => {
+            const rows = document.querySelectorAll('#tabla-body tr');
+            if (rows.length === 0 || rows[0].innerText.includes('No hay datos')) return alert("No hay datos para exportar.");
+            let csvContent = "\uFEFFFecha,Hora,Alumno,Matricula,Estado\n";
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if(cols.length > 1) {
+                    const rowData = Array.from(cols).map(col => `"${col.innerText}"`).join(",");
+                    csvContent += rowData + "\n";
+                }
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        };
+
+        // --- REPORTE GLOBAL ---
         window.generarMatrizAsistencia = async () => {
             const materia = document.getElementById('select-clase-reporte').value;
-            const thead = document.getElementById('matriz-head');
-            const tbody = document.getElementById('matriz-body');
-            const msg = document.getElementById('msg-reporte');
+            const thead = document.getElementById('matriz-head'); const tbody = document.getElementById('matriz-body'); const msg = document.getElementById('msg-reporte');
             if(!materia) return alert("Selecciona materia");
             tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">Procesando...</td></tr>';
             try {

@@ -9,10 +9,16 @@
     <style>
         .tab-active { border-bottom: 3px solid #1e3a8a; color: #1e3a8a; font-weight: 800; background-color: #eff6ff; }
         .tab-inactive { color: #6b7280; hover:bg-gray-50; }
-        /* Estilos para la tabla grande */
         .table-matrix th, .table-matrix td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-size: 0.85rem; }
-        .bg-cell-present { background-color: #dcfce7; color: #166534; font-weight: bold; } /* Verde asistencia */
-        .bg-cell-absent { background-color: #fee2e2; color: #991b1b; } /* Rojo falta */
+        .bg-cell-present { background-color: #dcfce7; color: #166534; font-weight: bold; } 
+        .bg-cell-absent { background-color: #fee2e2; color: #991b1b; }
+        
+        /* Animación para nuevos registros */
+        @keyframes highlight {
+            0% { background-color: #fef08a; transform: scale(1.02); }
+            100% { background-color: white; transform: scale(1); }
+        }
+        .nuevo-registro { animation: highlight 2s ease-out; }
     </style>
 </head>
 <body id="main-body" class="bg-gray-100 min-h-screen font-sans" style="display: none;">
@@ -55,31 +61,68 @@
         </div>
 
         <div id="view-qr" class="view-section">
-            <div class="bg-white p-8 rounded-lg shadow text-center max-w-lg mx-auto border-t-4 border-blue-900">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Pasar Lista</h2>
-                <p class="text-gray-500 mb-6 text-sm">Selecciona una clase para generar el código.</p>
+            <div class="bg-white p-6 rounded-lg shadow max-w-4xl mx-auto border-t-4 border-blue-900">
+                
+                <div id="config-qr-container" class="text-center py-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Pasar Lista</h2>
+                    <p class="text-gray-500 mb-6 text-sm">Selecciona una materia para abrir la sesión.</p>
 
-                <div id="selector-clase-container">
-                    <label class="block text-left text-sm font-bold text-gray-700 mb-1">Seleccionar Materia</label>
-                    <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4 focus:ring-2 focus:ring-blue-500">
-                        <option value="">-- Cargar materias... --</option>
-                    </select>
-                    <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg">
-                        Comenzar Clase
-                    </button>
+                    <div class="max-w-md mx-auto">
+                        <label class="block text-left text-sm font-bold text-gray-700 mb-1">Materia</label>
+                        <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4 focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Cargar materias... --</option>
+                        </select>
+                        <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg text-lg">
+                            INICIAR CLASE
+                        </button>
+                    </div>
                 </div>
 
-                <div id="panel-qr-activo" class="hidden mt-6 border-t pt-6">
-                    <h3 id="titulo-clase-activa" class="text-xl font-bold text-blue-900 mb-2"></h3>
-                    <div class="flex justify-center mb-4 bg-white p-2 inline-block rounded shadow-inner border">
-                        <canvas id="qrcode"></canvas>
+                <div id="panel-qr-activo" class="hidden">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <div>
+                            <span class="text-xs text-gray-400 font-bold uppercase">Clase en curso</span>
+                            <h3 id="titulo-clase-activa" class="text-2xl font-bold text-blue-900 leading-none"></h3>
+                        </div>
+                        <button onclick="detenerClase()" class="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold text-sm transition">
+                            ⏹ Terminar
+                        </button>
                     </div>
-                    <div class="text-sm text-gray-500">
-                        Actualizando código en: <span id="contador" class="font-bold text-red-500 text-xl">10</span>s
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        
+                        <div class="flex flex-col items-center justify-center border-r-0 md:border-r border-gray-200 p-4">
+                            <div class="bg-white p-2 inline-block rounded shadow-lg border mb-4">
+                                <canvas id="qrcode"></canvas>
+                            </div>
+                            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                Cambia en: <span id="contador" class="font-bold text-blue-600 w-6 inline-block text-center">10</span>s
+                            </div>
+                            <p class="text-xs text-gray-400 mt-4 text-center max-w-xs">
+                                Los alumnos deben escanear este código desde su celular.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col h-[400px]">
+                            <div class="flex justify-between items-end mb-2">
+                                <h4 class="font-bold text-gray-700">Asistentes en Sala</h4>
+                                <span id="contador-vivo" class="bg-green-100 text-green-800 text-2xl font-bold px-3 py-1 rounded-lg">0</span>
+                            </div>
+                            
+                            <div class="flex-1 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden flex flex-col">
+                                <div class="bg-gray-200 px-4 py-2 text-xs font-bold text-gray-500 flex justify-between">
+                                    <span>ALUMNO</span>
+                                    <span>HORA</span>
+                                </div>
+                                <ul id="lista-asistentes-vivo" class="overflow-y-auto p-2 space-y-2 flex-1">
+                                    <li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">
+                                        Esperando registros...
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
                     </div>
-                    <button onclick="detenerClase()" class="mt-6 text-red-500 underline text-sm hover:text-red-700 font-bold">
-                        Detener Clase
-                    </button>
                 </div>
             </div>
         </div>
@@ -93,12 +136,12 @@
                         <select id="filtro-clase" class="w-full p-2 border rounded text-sm"></select>
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-500">Fecha Específica</label>
+                        <label class="text-xs font-bold text-gray-500">Fecha</label>
                         <input type="date" id="filtro-fecha" class="w-full p-2 border rounded text-sm">
                     </div>
                     <div class="flex items-end">
                         <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">
-                            Buscar Registros
+                            Buscar
                         </button>
                     </div>
                 </div>
@@ -124,26 +167,24 @@
             <div class="bg-white p-6 rounded-lg shadow">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
                     <div>
-                        <h2 class="text-xl font-bold text-blue-900">📊 Porcentaje de Asistencias</h2>
-                        <p class="text-sm text-gray-500">Vista global por alumno y fechas</p>
+                        <h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2>
+                        <p class="text-sm text-gray-500">Sábana de asistencia por fechas</p>
                     </div>
                     <div class="mt-4 md:mt-0 flex gap-2">
                         <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]">
                             <option value="">-- Selecciona Materia --</option>
                         </select>
                         <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow">
-                            Generar Tabla
+                            Generar
                         </button>
                     </div>
                 </div>
-
-                <div class="overflow-x-auto bg-white border rounded-lg">
-                    <table class="w-full table-matrix border-collapse">
-                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs" id="matriz-head">
-                            <tr><th class="p-4">Selecciona una materia arriba para ver el reporte</th></tr>
+                <div class="overflow-x-auto bg-white border rounded-lg max-h-[500px]">
+                    <table class="w-full table-matrix border-collapse relative">
+                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs sticky top-0 z-20 shadow-sm" id="matriz-head">
+                            <tr><th class="p-4">Selecciona una materia arriba</th></tr>
                         </thead>
-                        <tbody class="text-gray-600" id="matriz-body">
-                        </tbody>
+                        <tbody class="text-gray-600" id="matriz-body"></tbody>
                     </table>
                 </div>
                 <p id="msg-reporte" class="text-center text-sm text-gray-400 mt-4"></p>
@@ -155,15 +196,15 @@
                 <div class="bg-white p-6 rounded-lg shadow h-fit border-t-4 border-green-600">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">➕ Nueva Materia</h2>
                     <form id="form-add-clase">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre de la materia</label>
-                        <input type="text" id="nueva-clase-nombre" required placeholder="Ej: Mecánica de Suelos" class="w-full p-2 border rounded mb-3">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Código (Opcional)</label>
-                        <input type="text" id="nueva-clase-id" placeholder="Ej: CIV-302" class="w-full p-2 border rounded mb-4">
-                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Guardar Materia</button>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre</label>
+                        <input type="text" id="nueva-clase-nombre" required placeholder="Ej: Cálculo I" class="w-full p-2 border rounded mb-3">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Código</label>
+                        <input type="text" id="nueva-clase-id" placeholder="Ej: MAT-101" class="w-full p-2 border rounded mb-4">
+                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Guardar</button>
                     </form>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4">📚 Mis Materias Activas</h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">📚 Mis Materias</h2>
                     <ul id="lista-clases" class="space-y-2">
                         <li class="text-gray-400 text-sm italic">Cargando...</li>
                     </ul>
@@ -176,16 +217,26 @@
     <script type="module">
         import { auth, db, collection, addDoc, serverTimestamp } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, getDocs, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // IMPORTANTE: Importamos onSnapshot para el tiempo real
+        import { doc, getDoc, getDocs, query, where, orderBy, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Variables Globales
         let usuarioActual = null;
         let intervaloQR;
         let qrGenerator;
         let claseActiva = null;
+        let unsubscribeLive = null; // Guardará la conexión en vivo para cerrarla luego
 
-        // --- INICIO Y NAVEGACIÓN ---
+        // --- NAVEGACIÓN ---
         window.cambiarTab = (tabName) => {
+            // Si nos salimos de la pestaña QR, detener la clase por seguridad
+            if (claseActiva && tabName !== 'qr') {
+                if(confirm("Salir detendrá la sesión de asistencia actual. ¿Continuar?")) {
+                    detenerClase();
+                } else {
+                    return; // Cancelar cambio de tab
+                }
+            }
+            
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
             
@@ -198,11 +249,10 @@
             activeBtn.classList.remove('tab-inactive');
         };
 
-        // --- AUTENTICACIÓN ---
+        // --- AUTH ---
         onAuthStateChanged(auth, async (user) => {
             const loader = document.getElementById('loader');
             const mainBody = document.getElementById('main-body');
-
             if (user) {
                 try {
                     const docSnap = await getDoc(doc(db, "usuarios", user.uid));
@@ -211,64 +261,155 @@
                         document.getElementById('nav-email').innerText = user.email;
                         loader.classList.add('hidden');
                         mainBody.style.display = "block";
-                        
-                        await cargarClases(); // Cargar dropdowns
+                        await cargarClases();
                         qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
-
                     } else {
-                        alert("⛔ Acceso exclusivo para docentes.");
+                        alert("Acceso denegado.");
                         window.location.href = "index.html";
                     }
-                } catch (e) {
-                    console.error(e);
-                    window.location.href = "index.html";
-                }
-            } else {
-                window.location.href = "login.html";
-            }
+                } catch (e) { console.error(e); }
+            } else { window.location.href = "login.html"; }
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
             signOut(auth).then(() => window.location.href = "index.html");
         });
 
-        // ==========================================
-        //  MÓDULO 1: CLASES (DROPDOWNS)
-        // ==========================================
+        // ============================
+        //  MÓDULO QR EN VIVO
+        // ============================
+        document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
+            const nombreClase = document.getElementById('select-clase-qr').value;
+            if(!nombreClase) return alert("Selecciona una materia");
+
+            // 1. UI Switch
+            claseActiva = nombreClase;
+            document.getElementById('titulo-clase-activa').innerText = nombreClase;
+            document.getElementById('config-qr-container').classList.add('hidden');
+            document.getElementById('panel-qr-activo').classList.remove('hidden');
+
+            // 2. Iniciar Ciclo QR
+            generarQR();
+            intervaloQR = setInterval(() => {
+                let s = parseInt(document.getElementById('contador').innerText);
+                s--;
+                document.getElementById('contador').innerText = s;
+                if(s <= 0) { generarQR(); document.getElementById('contador').innerText = 10; }
+            }, 1000);
+
+            // 3. INICIAR MONITOR EN VIVO (onSnapshot)
+            iniciarMonitorEnVivo(nombreClase);
+        });
+
+        window.detenerClase = () => {
+            // Detener QR
+            clearInterval(intervaloQR);
+            
+            // Detener Monitor en Vivo
+            if (unsubscribeLive) {
+                unsubscribeLive(); // Cortar conexión con Firebase
+                unsubscribeLive = null;
+            }
+
+            // Reset UI
+            document.getElementById('panel-qr-activo').classList.add('hidden');
+            document.getElementById('config-qr-container').classList.remove('hidden');
+            claseActiva = null;
+            document.getElementById('lista-asistentes-vivo').innerHTML = '<li class="text-center text-gray-400 text-sm py-10 italic">Esperando registros...</li>';
+            document.getElementById('contador-vivo').innerText = "0";
+        };
+
+        function iniciarMonitorEnVivo(materia) {
+            const listaEl = document.getElementById('lista-asistentes-vivo');
+            const contadorEl = document.getElementById('contador-vivo');
+            const horaInicio = new Date(); // Solo mostrar los que lleguen desde AHORA
+            
+            // Set para contar alumnos únicos en esta sesión (por si escanean doble)
+            const alumnosUnicos = new Set();
+
+            // Query: Asistencias de esta materia, creadas DESPUÉS de abrir el panel
+            // Nota: Si no tienes el índice compuesto, te saldrá el link en consola. Dale clic.
+            const q = query(
+                collection(db, "asistencias"),
+                where("id_sesion", "==", materia),
+                where("timestamp", ">=", horaInicio),
+                orderBy("timestamp", "desc")
+            );
+
+            // onSnapshot: Escucha cambios en tiempo real
+            unsubscribeLive = onSnapshot(q, (snapshot) => {
+                
+                // Si es la primera carga y está vacía
+                if (snapshot.empty) {
+                    // No hacemos nada, dejamos el mensaje de "Esperando..."
+                    return;
+                }
+
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const data = change.doc.data();
+                        
+                        // Quitar mensaje de "Esperando..." si es el primero
+                        const msgEsperando = document.getElementById('msg-esperando');
+                        if(msgEsperando) msgEsperando.remove();
+
+                        // 1. Actualizar Contador Único
+                        if (!alumnosUnicos.has(data.alumno.matricula)) {
+                            alumnosUnicos.add(data.alumno.matricula);
+                            contadorEl.innerText = alumnosUnicos.size;
+                        }
+
+                        // 2. Formatear Hora
+                        const hora = data.timestamp ? data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : "Reciente";
+
+                        // 3. Crear Elemento Visual
+                        const li = document.createElement('li');
+                        li.className = "flex justify-between items-center bg-white p-3 rounded shadow-sm border-l-4 border-green-500 nuevo-registro";
+                        li.innerHTML = `
+                            <div>
+                                <p class="font-bold text-gray-800 text-sm uppercase">${data.alumno.nombre}</p>
+                                <p class="text-xs text-gray-500">${data.alumno.matricula}</p>
+                            </div>
+                            <span class="text-xs font-mono text-gray-400 font-bold">${hora}</span>
+                        `;
+                        
+                        // Agregar al inicio de la lista
+                        listaEl.prepend(li);
+                    }
+                });
+            }, (error) => {
+                console.error("Error monitor en vivo:", error);
+                // Si falla por falta de índice, avisar al profe
+                if(error.message.includes("index")) {
+                    alert("⚠️ Configuración requerida: Mira la consola (F12) y haz clic en el enlace para crear el índice de Firestore.");
+                }
+            });
+        }
+
+        function generarQR() {
+            if(!claseActiva) return;
+            const data = JSON.stringify({ id: claseActiva, t: new Date().getTime(), s: Math.random().toString(36).substring(7) });
+            qrGenerator.value = data;
+        }
+
+        // ============================
+        //  MÓDULO GESTIÓN CLASES (Igual)
+        // ============================
         async function cargarClases() {
             const listaUl = document.getElementById('lista-clases');
-            const selects = [
-                document.getElementById('select-clase-qr'),
-                document.getElementById('filtro-clase'),
-                document.getElementById('select-clase-reporte')
-            ];
-            
-            listaUl.innerHTML = "";
-            selects.forEach(sel => sel.innerHTML = '<option value="">-- Selecciona Materia --</option>');
-
+            const selects = [document.getElementById('select-clase-qr'), document.getElementById('filtro-clase'), document.getElementById('select-clase-reporte')];
+            listaUl.innerHTML = ""; selects.forEach(s => s.innerHTML = '<option value="">-- Selecciona Materia --</option>');
             try {
                 const q = query(collection(db, "clases"), where("profesor_uid", "==", usuarioActual.uid));
-                const querySnapshot = await getDocs(q);
-                
-                if(querySnapshot.empty) listaUl.innerHTML = '<li class="text-gray-500 text-sm">Sin materias. Crea una nueva a la derecha.</li>';
-
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    
-                    // Lista visual
+                const snap = await getDocs(q);
+                if(snap.empty) listaUl.innerHTML = '<li class="text-gray-500 text-sm">Sin materias.</li>';
+                snap.forEach(d => {
+                    const data = d.data();
                     const li = document.createElement('li');
-                    li.className = "flex justify-between items-center bg-gray-50 p-3 rounded border hover:bg-blue-50 transition";
-                    li.innerHTML = `
-                        <div><p class="font-bold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.codigo || ''}</p></div>
-                        <button onclick="eliminarClase('${doc.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 p-1 rounded">Eliminar</button>
-                    `;
+                    li.className = "flex justify-between bg-gray-50 p-3 rounded border";
+                    li.innerHTML = `<div><p class="font-bold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.codigo||''}</p></div><button onclick="eliminarClase('${d.id}')" class="text-red-500 text-xs font-bold border p-1 rounded">Eliminar</button>`;
                     listaUl.appendChild(li);
-
-                    // Dropdowns
-                    selects.forEach(sel => {
-                        const opt = new Option(data.nombre, data.nombre);
-                        sel.add(opt);
-                    });
+                    selects.forEach(s => s.add(new Option(data.nombre, data.nombre)));
                 });
             } catch (e) { console.error(e); }
         }
@@ -277,224 +418,75 @@
             e.preventDefault();
             const nombre = document.getElementById('nueva-clase-nombre').value;
             const codigo = document.getElementById('nueva-clase-id').value;
-            
             try {
-                await addDoc(collection(db, "clases"), {
-                    nombre, codigo, profesor_uid: usuarioActual.uid, creado: serverTimestamp()
-                });
-                document.getElementById('nueva-clase-nombre').value = "";
-                document.getElementById('nueva-clase-id').value = "";
-                alert("Materia agregada.");
-                cargarClases();
-            } catch (error) { alert("Error: " + error.message); }
+                await addDoc(collection(db, "clases"), { nombre, codigo, profesor_uid: usuarioActual.uid, creado: serverTimestamp() });
+                document.getElementById('nueva-clase-nombre').value=""; document.getElementById('nueva-clase-id').value="";
+                alert("Materia guardada."); cargarClases();
+            } catch (e) { alert("Error: "+e.message); }
         });
 
-        window.eliminarClase = async (id) => {
-            if(confirm("¿Eliminar materia? Esto no borrará las asistencias pasadas.")) {
-                await deleteDoc(doc(db, "clases", id));
-                cargarClases();
-            }
-        };
+        window.eliminarClase = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "clases", id)); cargarClases(); } };
 
-        // ==========================================
-        //  MÓDULO 2: QR
-        // ==========================================
-        document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
-            const nombreClase = document.getElementById('select-clase-qr').value;
-            if(!nombreClase) return alert("Selecciona una materia");
-
-            claseActiva = nombreClase;
-            document.getElementById('titulo-clase-activa').innerText = nombreClase;
-            document.getElementById('selector-clase-container').classList.add('hidden');
-            document.getElementById('panel-qr-activo').classList.remove('hidden');
-
-            generarQR();
-            intervaloQR = setInterval(() => {
-                let s = parseInt(document.getElementById('contador').innerText);
-                s--;
-                document.getElementById('contador').innerText = s;
-                if(s <= 0) { generarQR(); document.getElementById('contador').innerText = 10; }
-            }, 1000);
-        });
-
-        window.detenerClase = () => {
-            clearInterval(intervaloQR);
-            document.getElementById('panel-qr-activo').classList.add('hidden');
-            document.getElementById('selector-clase-container').classList.remove('hidden');
-            claseActiva = null;
-        };
-
-        function generarQR() {
-            if(!claseActiva) return;
-            const data = JSON.stringify({
-                id: claseActiva, t: new Date().getTime(), s: Math.random().toString(36).substring(7)
-            });
-            qrGenerator.value = data;
-        }
-
-        // ==========================================
-        //  MÓDULO 3: HISTORIAL SIMPLE
-        // ==========================================
+        // ============================
+        //  MÓDULOS HISTORIAL Y REPORTE (Iguales)
+        // ============================
         window.consultarAsistencias = async () => {
             const filtroClase = document.getElementById('filtro-clase').value;
             const filtroFecha = document.getElementById('filtro-fecha').value;
             const tbody = document.getElementById('tabla-body');
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-blue-500 font-bold">Buscando...</td></tr>';
-
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-blue-500">Buscando...</td></tr>';
             try {
                 let q = query(collection(db, "asistencias"), orderBy("timestamp", "desc"));
                 if (filtroClase) q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
-
-                const snapshot = await getDocs(q);
-                tbody.innerHTML = "";
-                let count = 0;
-
-                snapshot.forEach(doc => {
+                const snap = await getDocs(q);
+                tbody.innerHTML = ""; let count=0;
+                snap.forEach(doc => {
                     const data = doc.data();
-                    let fechaRegistro = "---";
-                    let fechaFiltro = "";
-
-                    if (data.timestamp) {
-                        const d = data.timestamp.toDate();
-                        fechaRegistro = d.toLocaleString();
-                        fechaFiltro = d.toISOString().split('T')[0];
-                    }
-
+                    let fechaFiltro = data.timestamp ? data.timestamp.toDate().toISOString().split('T')[0] : "";
                     if (!filtroFecha || filtroFecha === fechaFiltro) {
                         count++;
-                        tbody.innerHTML += `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4">${fechaRegistro}</td>
-                                <td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td>
-                                <td class="px-6 py-4">${data.alumno.matricula}</td>
-                                <td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td>
-                            </tr>
-                        `;
+                        tbody.innerHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-6 py-4">${data.timestamp.toDate().toLocaleString()}</td><td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td><td class="px-6 py-4">${data.alumno.matricula}</td><td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td></tr>`;
                     }
                 });
-                if(count === 0) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay datos.</td></tr>';
-            } catch (e) {
-                console.error(e);
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500">Error: ${e.message} (Intenta crear el índice si es la primera vez)</td></tr>`;
-            }
+                if(count===0) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">No hay datos.</td></tr>';
+            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="4" class="text-center text-red-500">Error (Revisa consola para crear índice): ${e.message}</td></tr>`; }
         };
 
-        // ==========================================
-        //  MÓDULO 4: SÁBANA DE ASISTENCIA (MATRIZ)
-        // ==========================================
         window.generarMatrizAsistencia = async () => {
             const materia = document.getElementById('select-clase-reporte').value;
             const thead = document.getElementById('matriz-head');
             const tbody = document.getElementById('matriz-body');
             const msg = document.getElementById('msg-reporte');
-
-            if(!materia) return alert("Selecciona una materia primero.");
-
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">Procesando datos...</td></tr>';
-            
+            if(!materia) return alert("Selecciona materia");
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">Procesando...</td></tr>';
             try {
-                // 1. Obtener todas las asistencias de la materia
                 const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia));
-                const snapshot = await getDocs(q);
-
-                if(snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">No hay registros para esta materia aún.</td></tr>';
-                    thead.innerHTML = '';
-                    return;
-                }
-
-                // 2. Procesar Datos (Pivote)
-                const fechasSet = new Set(); // Para columnas únicas
-                const alumnosMap = {}; // Para filas únicas
-
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    // Fecha formateada YYYY-MM-DD
-                    const fechaObj = data.timestamp.toDate();
-                    const fechaStr = fechaObj.toISOString().split('T')[0];
-                    const fechaDisplay = `${fechaObj.getDate()}/${fechaObj.getMonth()+1}`;
-
-                    // Guardamos la fecha (clave para ordenamiento)
-                    fechasSet.add(fechaStr);
-
-                    // Guardamos alumno
-                    const matricula = data.alumno.matricula;
-                    const nombre = data.alumno.nombre;
-                    
-                    if(!alumnosMap[matricula]) {
-                        alumnosMap[matricula] = {
-                            nombre: nombre,
-                            asistencias: new Set() // Usamos Set para que si checa 2 veces el mismo día, solo cuente 1
-                        };
-                    }
-                    alumnosMap[matricula].asistencias.add(fechaStr);
+                const snap = await getDocs(q);
+                if(snap.empty) { tbody.innerHTML='<tr><td colspan="10" class="text-center p-4">Sin registros.</td></tr>'; return; }
+                const fechasSet = new Set(); const alumnosMap = {};
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const f = d.timestamp.toDate().toISOString().split('T')[0];
+                    fechasSet.add(f);
+                    if(!alumnosMap[d.alumno.matricula]) alumnosMap[d.alumno.matricula] = { nombre: d.alumno.nombre, asistencias: new Set() };
+                    alumnosMap[d.alumno.matricula].asistencias.add(f);
                 });
-
-                // 3. Ordenar Fechas (Columnas)
-                const fechasOrdenadas = Array.from(fechasSet).sort();
-                const totalClases = fechasOrdenadas.length;
-
-                // 4. Construir Cabecera (Header)
-                let headerHTML = `<tr>
-                    <th class="bg-gray-200 sticky left-0 z-10 w-64 text-left">ALUMNO</th>
-                    <th class="bg-blue-100 text-blue-800">%</th>`;
-                
-                fechasOrdenadas.forEach(fechaISO => {
-                    // Convertir 2024-01-05 a 5/1 para ahorrar espacio
-                    const partes = fechaISO.split('-');
-                    headerHTML += `<th class="bg-gray-100 min-w-[50px]">${partes[2]}/${partes[1]}</th>`;
-                });
-                headerHTML += '</tr>';
-                thead.innerHTML = headerHTML;
-
-                // 5. Construir Cuerpo (Body)
+                const fechas = Array.from(fechasSet).sort();
+                let head = `<tr><th class="bg-gray-200 sticky left-0 z-10 w-64 text-left p-2">ALUMNO</th><th class="bg-blue-100 text-blue-800 p-2">%</th>`;
+                fechas.forEach(f => { const p=f.split('-'); head+=`<th class="bg-gray-100 min-w-[50px] p-2">${p[2]}/${p[1]}</th>`; });
+                thead.innerHTML = head + '</tr>';
                 tbody.innerHTML = "";
-                
-                // Ordenar alumnos alfabéticamente
-                const matriculasOrdenadas = Object.keys(alumnosMap).sort((a,b) => 
-                    alumnosMap[a].nombre.localeCompare(alumnosMap[b].nombre)
-                );
-
-                matriculasOrdenadas.forEach(mat => {
-                    const alumno = alumnosMap[mat];
-                    const diasAsistidos = alumno.asistencias.size;
-                    
-                    // Cálculo de porcentaje
-                    let porcentaje = 0;
-                    if(totalClases > 0) porcentaje = Math.round((diasAsistidos / totalClases) * 100);
-
-                    // Color del porcentaje
-                    let colorPorc = "text-gray-700";
-                    if(porcentaje < 80) colorPorc = "text-red-600 font-bold";
-                    if(porcentaje === 100) colorPorc = "text-green-600 font-bold";
-
-                    let rowHTML = `<tr class="hover:bg-gray-50 transition">
-                        <td class="sticky left-0 bg-white border-r text-left font-bold text-gray-700 px-3 py-2 text-xs md:text-sm whitespace-nowrap">
-                            ${alumno.nombre} <br><span class="text-gray-400 font-normal text-xs">${mat}</span>
-                        </td>
-                        <td class="${colorPorc} border-r bg-blue-50">${porcentaje}%</td>`;
-
-                    // Celdas por fecha
-                    fechasOrdenadas.forEach(fecha => {
-                        if(alumno.asistencias.has(fecha)) {
-                            rowHTML += `<td class="bg-cell-present">1</td>`;
-                        } else {
-                            rowHTML += `<td class="bg-cell-absent">0</td>`;
-                        }
-                    });
-
-                    rowHTML += `</tr>`;
-                    tbody.innerHTML += rowHTML;
+                Object.keys(alumnosMap).sort((a,b)=>alumnosMap[a].nombre.localeCompare(alumnosMap[b].nombre)).forEach(mat => {
+                    const al = alumnosMap[mat];
+                    const porc = Math.round((al.asistencias.size/fechas.length)*100);
+                    let color = porc<80 ? "text-red-600 font-bold" : (porc===100?"text-green-600 font-bold":"text-gray-700");
+                    let row = `<tr class="hover:bg-gray-50 transition"><td class="sticky left-0 bg-white border-r text-left font-bold text-gray-700 px-3 py-2 text-xs md:text-sm whitespace-nowrap">${al.nombre}</td><td class="${color} border-r bg-blue-50">${porc}%</td>`;
+                    fechas.forEach(f => row+=`<td class="${al.asistencias.has(f)?'bg-cell-present':'bg-cell-absent'}">${al.asistencias.has(f)?'1':'0'}</td>`);
+                    tbody.innerHTML += row + '</tr>';
                 });
-
-                msg.innerText = `Mostrando ${matriculasOrdenadas.length} alumnos en ${totalClases} días de clase.`;
-
-            } catch (e) {
-                console.error(e);
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-red-500 p-4">Error generando reporte: ${e.message}</td></tr>`;
-            }
+                msg.innerText = `Total: ${Object.keys(alumnosMap).length} alumnos, ${fechas.length} sesiones.`;
+            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="10" class="text-center text-red-500 p-4">Error: ${e.message}</td></tr>`; }
         };
-
     </script>
 </body>
 </html>

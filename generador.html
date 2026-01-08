@@ -3,491 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Docente - UADY</title>
+    <title>Scanner UADY - Alumno</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        .tab-active { border-bottom: 3px solid #1e3a8a; color: #1e3a8a; font-weight: 800; background-color: #eff6ff; }
-        .tab-inactive { color: #6b7280; hover:bg-gray-50; }
-        .table-matrix th, .table-matrix td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; font-size: 0.85rem; }
-        .bg-cell-present { background-color: #dcfce7; color: #166534; font-weight: bold; } 
-        .bg-cell-absent { background-color: #fee2e2; color: #991b1b; }
-        @keyframes highlight {
-            0% { background-color: #fef08a; transform: scale(1.02); }
-            100% { background-color: white; transform: scale(1); }
-        }
-        .nuevo-registro { animation: highlight 2s ease-out; }
-        /* Estilo para el botón de eliminar */
-        .btn-delete { opacity: 0.6; transition: opacity 0.2s; }
-        .registro-item:hover .btn-delete { opacity: 1; }
+        #reader { width: 100%; min-height: 300px; background: #000; border-radius: 8px; }
+        video { object-fit: cover; border-radius: 8px; }
+        .stat-box { transition: all 0.3s ease; }
     </style>
 </head>
-<body id="main-body" class="bg-gray-100 min-h-screen font-sans" style="display: none;">
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4">
 
-    <div id="loader" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+    <div id="pantalla-carga" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-900 mb-4"></div>
-        <p class="text-blue-900 font-bold">Cargando Panel Docente...</p>
+        <p class="text-blue-900 font-bold text-lg">Verificando sesión...</p>
     </div>
 
-    <nav class="bg-blue-900 text-white shadow-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <div class="h-8 w-8 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold">U</div>
-                <span class="font-bold text-lg">Docente UADY</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <span id="nav-email" class="text-xs text-blue-200 hidden md:block"></span>
-                <button id="btn-logout" class="bg-red-600 hover:bg-red-700 text-white text-xs py-2 px-4 rounded font-bold transition">
-                    CERRAR SESIÓN
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <main class="max-w-7xl mx-auto p-4">
+    <div id="interfaz-principal" class="hidden w-full max-w-md">
         
-        <div class="flex flex-wrap border-b border-gray-300 mb-6 bg-white rounded-lg px-2 pt-2 shadow-sm overflow-x-auto">
-            <button onclick="cambiarTab('qr')" id="tab-qr" class="tab-active flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
-                Generar QR
-            </button>
-            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
-                Historial Simple
-            </button>
-            <button onclick="cambiarTab('reporte')" id="tab-reporte" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap text-blue-700 font-bold">
-                📊 Sábana de Asistencias
-            </button>
-            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
-                Administrar Clases
-            </button>
-        </div>
-
-        <div id="view-qr" class="view-section">
-            <div class="bg-white p-6 rounded-lg shadow max-w-4xl mx-auto border-t-4 border-blue-900">
-                <div id="config-qr-container" class="text-center py-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Pasar Lista</h2>
-                    <p class="text-gray-500 mb-6 text-sm">Selecciona una materia para abrir la sesión.</p>
-                    <div class="max-w-md mx-auto">
-                        <label class="block text-left text-sm font-bold text-gray-700 mb-1">Materia</label>
-                        <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4 focus:ring-2 focus:ring-blue-500">
-                            <option value="">-- Cargar materias... --</option>
-                        </select>
-                        <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg text-lg">
-                            INICIAR CLASE
-                        </button>
-                    </div>
-                </div>
-
-                <div id="panel-qr-activo" class="hidden">
-                    <div class="flex justify-between items-center mb-4 border-b pb-2">
-                        <div>
-                            <span class="text-xs text-gray-400 font-bold uppercase">Clase en curso</span>
-                            <h3 id="titulo-clase-activa" class="text-2xl font-bold text-blue-900 leading-none"></h3>
-                        </div>
-                        <button onclick="detenerClase()" class="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold text-sm transition">
-                            ⏹ Terminar
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="flex flex-col items-center border-r-0 md:border-r border-gray-200 p-4">
-                            <div class="bg-white p-2 inline-block rounded shadow-lg border mb-4">
-                                <canvas id="qrcode"></canvas>
-                            </div>
-                            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-6">
-                                Cambia en: <span id="contador" class="font-bold text-blue-600 w-6 inline-block text-center">10</span>s
-                            </div>
-
-                            <div class="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-sm">
-                                <h4 class="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                                    <span>✍️</span> Registro Rápido
-                                </h4>
-                                <p class="text-xs text-yellow-600 mb-3">Escribe la matrícula, el sistema buscará el nombre.</p>
-                                <div class="space-y-2">
-                                    <div class="flex gap-2">
-                                        <input type="text" id="manual-matricula" placeholder="Matrícula (Ej: A1234)" class="w-full p-2 text-sm border rounded uppercase focus:ring-2 focus:ring-yellow-500">
-                                        <button onclick="registrarManual()" class="bg-yellow-600 text-white px-4 py-2 rounded font-bold hover:bg-yellow-700 transition shadow">
-                                            OK
-                                        </button>
-                                    </div>
-                                    <p id="manual-status" class="text-xs text-center text-gray-400 italic h-4"></p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col h-[500px]">
-                            <div class="flex justify-between items-end mb-2">
-                                <h4 class="font-bold text-gray-700">Asistentes en Sala</h4>
-                                <span id="contador-vivo" class="bg-green-100 text-green-800 text-2xl font-bold px-3 py-1 rounded-lg">0</span>
-                            </div>
-                            <div class="flex-1 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden flex flex-col">
-                                <div class="bg-gray-200 px-4 py-2 text-xs font-bold text-gray-500 flex justify-between">
-                                    <span>ALUMNO</span><span>HORA</span>
-                                </div>
-                                <ul id="lista-asistentes-vivo" class="overflow-y-auto p-2 space-y-2 flex-1">
-                                    <li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">Esperando registros...</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-900 flex justify-between items-center">
+            <div>
+                <p class="text-xs text-gray-500 uppercase">Bienvenido</p>
+                <h2 id="user-nombre" class="text-lg font-bold text-gray-800 leading-tight">Cargando...</h2>
+                <p id="user-matricula" class="text-sm text-blue-600 font-mono font-bold">...</p>
             </div>
+            <button id="btn-cerrar-sesion" class="text-xs bg-red-50 text-red-600 px-3 py-2 rounded border border-red-100 hover:bg-red-100 font-bold transition">
+                Salir
+            </button>
         </div>
 
-        <div id="view-historial" class="view-section hidden">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">Bitácora Diaria</h2>
-                    <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold text-sm flex items-center gap-2 shadow transition">
-                        <span>📥</span> Descargar Excel (CSV)
+        <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+            <div class="bg-blue-900 p-3 text-white text-center">
+                <h1 class="text-lg font-bold">Registrar Asistencia</h1>
+            </div>
+
+            <div class="p-4">
+                <div id="step-scan">
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">1. Elige la materia</label>
+                        <select id="select-materia" class="w-full p-3 border-2 border-blue-100 rounded-lg bg-gray-50 focus:border-blue-500 focus:outline-none text-gray-800 font-medium">
+                            <option value="">-- Cargando materias... --</option>
+                        </select>
+                    </div>
+
+                    <div id="panel-stats-previo" class="hidden mb-6 bg-gray-50 rounded-lg p-3 border border-gray-200 flex justify-between items-center stat-box">
+                        <div>
+                            <p class="text-xs text-gray-500 font-bold uppercase">Tu Asistencia Actual</p>
+                            <p id="stat-previo-texto" class="text-xs text-gray-400">Calculando...</p>
+                        </div>
+                        <div class="text-right">
+                            <span id="stat-previo-porc" class="text-2xl font-bold text-gray-700">--%</span>
+                        </div>
+                    </div>
+
+                    <p class="text-xs font-bold text-gray-500 mb-2 uppercase">2. Escanea el código</p>
+                    <div id="reader" class="mb-2"></div>
+                    <div id="msg-status" class="mt-2 text-center text-sm font-bold text-gray-600">Cámara en espera...</div>
+                </div>
+
+                <div id="step-result" class="hidden text-center py-6">
+                    <div id="icon-result" class="text-5xl mb-2"></div>
+                    <h2 id="title-result" class="text-xl font-bold"></h2>
+                    <p id="desc-result" class="text-gray-600 text-sm mb-6"></p>
+
+                    <div class="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100 mx-auto max-w-xs shadow-inner">
+                        <p class="text-xs text-blue-800 font-bold uppercase mb-1">Nueva Estadística</p>
+                        <div class="flex justify-center items-baseline gap-1">
+                            <span id="stat-nuevo-porc" class="text-4xl font-bold text-blue-900">--%</span>
+                            <span class="text-sm text-blue-600 font-bold">Total</span>
+                        </div>
+                        <p id="stat-nuevo-detalles" class="text-xs text-blue-400 mt-1">-- de -- sesiones asistidas</p>
+                    </div>
+
+                    <button onclick="location.reload()" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition transform active:scale-95">
+                        Escanear otra vez
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div>
-                        <label class="text-xs font-bold text-gray-500">Materia</label>
-                        <select id="filtro-clase" class="w-full p-2 border rounded text-sm"></select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-gray-500">Fecha</label>
-                        <input type="date" id="filtro-fecha" class="w-full p-2 border rounded text-sm">
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">Buscar</button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto border rounded">
-                    <table class="w-full text-sm text-left text-gray-500" id="tabla-exportable">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th class="px-6 py-3">Fecha</th>
-                                <th class="px-6 py-3">Hora</th>
-                                <th class="px-6 py-3">Alumno</th>
-                                <th class="px-6 py-3">Matrícula</th>
-                                <th class="px-6 py-3">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-body">
-                            <tr><td colspan="5" class="text-center py-4">Selecciona filtros...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
-
-        <div id="view-reporte" class="view-section hidden">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
-                    <div><h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2><p class="text-sm text-gray-500">Vista tipo Excel por fechas</p></div>
-                    <div class="mt-4 md:mt-0 flex gap-2">
-                        <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]"><option value="">-- Selecciona Materia --</option></select>
-                        <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow">Generar</button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto bg-white border rounded-lg max-h-[500px]">
-                    <table class="w-full table-matrix border-collapse relative">
-                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs sticky top-0 z-20 shadow-sm" id="matriz-head"><tr><th class="p-4">Selecciona una materia arriba</th></tr></thead>
-                        <tbody class="text-gray-600" id="matriz-body"></tbody>
-                    </table>
-                </div>
-                <p id="msg-reporte" class="text-center text-sm text-gray-400 mt-4"></p>
-            </div>
-        </div>
-
-        <div id="view-clases" class="view-section hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow h-fit border-t-4 border-green-600">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4">➕ Nueva Materia</h2>
-                    <form id="form-add-clase">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre</label><input type="text" id="nueva-clase-nombre" required class="w-full p-2 border rounded mb-3">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Código</label><input type="text" id="nueva-clase-id" class="w-full p-2 border rounded mb-4">
-                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Guardar</button>
-                    </form>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4">📚 Mis Materias</h2>
-                    <ul id="lista-clases" class="space-y-2"><li class="text-gray-400 text-sm italic">Cargando...</li></ul>
-                </div>
-            </div>
-        </div>
-    </main>
+    </div>
 
     <script type="module">
-        import { auth, db, collection, addDoc, serverTimestamp } from './firebase-config.js';
+        import { db, auth, collection, addDoc, serverTimestamp } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, getDocs, query, where, orderBy, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        let usuarioActual = null;
-        let intervaloQR;
-        let qrGenerator;
-        let claseActiva = null;
-        let unsubscribeLive = null;
-        
-        // Variable para contar asistentes en tiempo real
-        let asistentesVivos = 0;
+        // --- CONFIGURACIÓN DE SEGURIDAD MEJORADA ---
+        const DISTANCIA_MAXIMA_METROS = 200; 
+        const TIEMPO_MAXIMO_QR_SEGUNDOS = 30; // Reducido de 120 a 30 segundos
+        const LAT_SALON = 21.0483; 
+        const LNG_SALON = -89.6433; 
 
-        window.cambiarTab = (tabName) => {
-            if (claseActiva && tabName !== 'qr') {
-                if(confirm("Salir detendrá la sesión actual. ¿Continuar?")) detenerClase(); else return;
-            }
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            document.querySelectorAll('button[id^="tab-"]').forEach(btn => { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); });
-            const activeBtn = document.getElementById(`tab-${tabName}`);
-            activeBtn.classList.add('tab-active'); activeBtn.classList.remove('tab-inactive');
-        };
+        // Variables Globales
+        let datosUsuario = { nombre: '', matricula: '' };
+        let html5QrCode;
 
+        // Elementos DOM
+        const pantallaCarga = document.getElementById('pantalla-carga');
+        const interfazPrincipal = document.getElementById('interfaz-principal');
+        const selectMateria = document.getElementById('select-materia');
+        const msgStatus = document.getElementById('msg-status');
+        const panelStatsPrevio = document.getElementById('panel-stats-previo');
+
+        // --- AUTH & LOAD ---
         onAuthStateChanged(auth, async (user) => {
-            const loader = document.getElementById('loader');
-            const mainBody = document.getElementById('main-body');
             if (user) {
                 try {
                     const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-                    if (docSnap.exists() && docSnap.data().rol === "profesor") {
-                        usuarioActual = user;
-                        document.getElementById('nav-email').innerText = user.email;
-                        loader.classList.add('hidden');
-                        mainBody.style.display = "block";
-                        await cargarClases();
-                        qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
-                    } else { alert("Acceso denegado."); window.location.href = "index.html"; }
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        datosUsuario = { nombre: data.nombre, matricula: data.matricula };
+                        
+                        document.getElementById('user-nombre').innerText = data.nombre;
+                        document.getElementById('user-matricula').innerText = data.matricula || "Sin matrícula";
+                        
+                        await cargarListaMaterias();
+
+                        pantallaCarga.classList.add('hidden');
+                        interfazPrincipal.classList.remove('hidden');
+                        iniciarCamara();
+                    } else {
+                        alert("Perfil no encontrado."); window.location.href = "login.html";
+                    }
                 } catch (e) { console.error(e); }
             } else { window.location.href = "login.html"; }
         });
 
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            signOut(auth).then(() => window.location.href = "index.html");
-        });
-
-        document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
-            const nombreClase = document.getElementById('select-clase-qr').value;
-            if(!nombreClase) return alert("Selecciona una materia");
-            claseActiva = nombreClase;
-            document.getElementById('titulo-clase-activa').innerText = nombreClase;
-            document.getElementById('config-qr-container').classList.add('hidden');
-            document.getElementById('panel-qr-activo').classList.remove('hidden');
-            generarQR();
-            intervaloQR = setInterval(() => {
-                let s = parseInt(document.getElementById('contador').innerText); s--;
-                document.getElementById('contador').innerText = s;
-                if(s <= 0) { generarQR(); document.getElementById('contador').innerText = 10; }
-            }, 1000);
-            iniciarMonitorEnVivo(nombreClase);
-        });
-
-        window.detenerClase = () => {
-            clearInterval(intervaloQR);
-            if (unsubscribeLive) { unsubscribeLive(); unsubscribeLive = null; }
-            document.getElementById('panel-qr-activo').classList.add('hidden');
-            document.getElementById('config-qr-container').classList.remove('hidden');
-            claseActiva = null;
-            document.getElementById('lista-asistentes-vivo').innerHTML = '<li class="text-center text-gray-400 text-sm py-10 italic">Esperando registros...</li>';
-            asistentesVivos = 0;
-            document.getElementById('contador-vivo').innerText = "0";
-            document.getElementById('manual-matricula').value = "";
-            document.getElementById('manual-status').innerText = "";
-        };
-
-        window.registrarManual = async () => {
-            const mat = document.getElementById('manual-matricula').value.toUpperCase().trim();
-            const statusEl = document.getElementById('manual-status');
-            
-            if(!mat) return;
-            statusEl.innerText = "Buscando alumno...";
-            
+        // --- HELPER: OBTENER HORA REAL DE INTERNET ---
+        async function obtenerHoraInternet() {
             try {
-                const q = query(collection(db, "usuarios"), where("matricula", "==", mat));
-                const querySnapshot = await getDocs(q);
-                let nombreFinal = "ALUMNO EXTERNO"; 
-                if (!querySnapshot.empty) { nombreFinal = querySnapshot.docs[0].data().nombre; }
-
-                await addDoc(collection(db, "asistencias"), {
-                    id_sesion: claseActiva,
-                    qr_token: new Date().getTime(),
-                    alumno: { nombre: nombreFinal, matricula: mat },
-                    ubicacion: { lat: 0, lng: 0, manual: true },
-                    timestamp: serverTimestamp(),
-                    dispositivo: "Registro Manual Docente"
-                });
-                document.getElementById('manual-matricula').value = "";
-                statusEl.innerText = `✓ Registrado: ${nombreFinal}`;
-                setTimeout(() => statusEl.innerText = "", 3000);
-            } catch (e) {
-                statusEl.innerText = "Error: " + e.message;
-                if(e.message.includes("index")) alert("Falta índice en 'usuarios'. Revisa consola.");
-            }
-        };
-
-        // --- NUEVA FUNCIÓN PARA ELIMINAR DEL VIVO ---
-        window.eliminarRegistroVivo = async (idAsistencia) => {
-            if(confirm("¿Eliminar este registro de asistencia?")) {
-                try {
-                    await deleteDoc(doc(db, "asistencias", idAsistencia));
-                    // El onSnapshot se encargará de actualizar la vista automáticamente
-                } catch (e) {
-                    alert("Error eliminando: " + e.message);
+                // Hacemos una petición ligera a nuestro propio servidor (Github Pages) para ver su hora
+                // Esto evita que el alumno cambie la hora de su celular para engañar al sistema.
+                const response = await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' });
+                const serverDateStr = response.headers.get('date');
+                if (serverDateStr) {
+                    return new Date(serverDateStr).getTime();
                 }
+                throw new Error("No date header");
+            } catch (e) {
+                console.warn("No se pudo obtener hora de internet, usando local con advertencia.");
+                return new Date().getTime(); // Fallback por si falla internet, pero el QR expira rápido
             }
-        };
+        }
 
-        function iniciarMonitorEnVivo(materia) {
-            const listaEl = document.getElementById('lista-asistentes-vivo');
-            const contadorEl = document.getElementById('contador-vivo');
-            const horaInicio = new Date();
-            const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia), where("timestamp", ">=", horaInicio), orderBy("timestamp", "desc"));
+        // --- CÁLCULO DE ESTADÍSTICAS ---
+        async function calcularEstadisticas(materia) {
+            document.getElementById('stat-previo-porc').innerText = "...";
+            document.getElementById('stat-previo-texto').innerText = "Analizando historial...";
             
-            unsubscribeLive = onSnapshot(q, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    const data = change.doc.data();
-                    const docId = change.doc.id;
+            try {
+                const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia));
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) {
+                    return { porcentaje: 100, asistidas: 0, totales: 0 };
+                }
 
-                    // CASO 1: NUEVO REGISTRO
-                    if (change.type === "added") {
-                        const msgEsperando = document.getElementById('msg-esperando');
-                        if(msgEsperando) msgEsperando.remove();
-                        
-                        asistentesVivos++;
-                        contadorEl.innerText = asistentesVivos;
-                        
-                        const hora = data.timestamp ? data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : "Reciente";
-                        const esManual = data.ubicacion && data.ubicacion.manual;
-                        const icon = esManual ? "✍️" : "📱";
-                        const estilo = esManual ? "border-yellow-400 bg-yellow-50" : "border-green-500 bg-white";
-                        
-                        // Añadimos ID al LI para poder borrarlo luego si hace falta
-                        const li = document.createElement('li');
-                        li.id = `asistencia-${docId}`;
-                        li.className = `registro-item flex justify-between items-center p-3 rounded shadow-sm border-l-4 nuevo-registro ${estilo} group`;
-                        li.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <div>
-                                    <p class="font-bold text-gray-800 text-sm uppercase">${icon} ${data.alumno.nombre}</p>
-                                    <p class="text-xs text-gray-500">${data.alumno.matricula}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-mono text-gray-400 font-bold">${hora}</span>
-                                <button onclick="eliminarRegistroVivo('${docId}')" class="btn-delete text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Eliminar Asistencia">
-                                    🗑️
-                                </button>
-                            </div>
-                        `;
-                        listaEl.prepend(li);
-                    }
-                    
-                    // CASO 2: ELIMINADO (Esto pasa cuando borras con el botón 🗑️)
-                    if (change.type === "removed") {
-                        const liToRemove = document.getElementById(`asistencia-${docId}`);
-                        if (liToRemove) {
-                            liToRemove.remove();
-                            asistentesVivos--;
-                            contadorEl.innerText = asistentesVivos;
-                        }
+                const fechasTotales = new Set();
+                const fechasAlumno = new Set();
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const fechaStr = d.timestamp.toDate().toISOString().split('T')[0];
+                    fechasTotales.add(fechaStr);
+
+                    if (d.alumno.matricula === datosUsuario.matricula) {
+                        fechasAlumno.add(fechaStr);
                     }
                 });
-            }, (error) => { if(error.message.includes("index")) alert("⚠️ Revisa la consola para crear el índice."); });
+
+                const totalClases = fechasTotales.size;
+                const totalAsistidas = fechasAlumno.size;
+                let porcentaje = 100;
+                
+                if (totalClases > 0) {
+                    porcentaje = Math.round((totalAsistidas / totalClases) * 100);
+                }
+
+                return { porcentaje, asistidas: totalAsistidas, totales: totalClases };
+
+            } catch (e) {
+                console.error("Error stats:", e);
+                return null;
+            }
         }
 
-        function generarQR() {
-            if(!claseActiva) return;
-            const data = JSON.stringify({ id: claseActiva, t: new Date().getTime(), s: Math.random().toString(36).substring(7) });
-            qrGenerator.value = data;
-        }
+        // --- EVENTO AL SELECCIONAR MATERIA ---
+        selectMateria.addEventListener('change', async () => {
+            const materia = selectMateria.value;
+            if (!materia) {
+                panelStatsPrevio.classList.add('hidden');
+                return;
+            }
 
-        async function cargarClases() {
-            const listaUl = document.getElementById('lista-clases');
-            const selects = [document.getElementById('select-clase-qr'), document.getElementById('filtro-clase'), document.getElementById('select-clase-reporte')];
-            listaUl.innerHTML = ""; selects.forEach(s => s.innerHTML = '<option value="">-- Selecciona Materia --</option>');
+            panelStatsPrevio.classList.remove('hidden');
+            const stats = await calcularEstadisticas(materia);
+            
+            if (stats) {
+                const elPorc = document.getElementById('stat-previo-porc');
+                elPorc.innerText = stats.porcentaje + "%";
+                document.getElementById('stat-previo-texto').innerText = `${stats.asistidas} de ${stats.totales} clases`;
+                elPorc.className = "text-2xl font-bold " + (stats.porcentaje < 80 ? "text-red-600" : "text-green-600");
+            }
+        });
+
+        // --- SCANNER ---
+        async function cargarListaMaterias() {
+            selectMateria.innerHTML = '<option value="">-- Selecciona una materia --</option>';
             try {
-                const q = query(collection(db, "clases"), where("profesor_uid", "==", usuarioActual.uid));
-                const snap = await getDocs(q);
-                if(snap.empty) listaUl.innerHTML = '<li class="text-gray-500 text-sm">Sin materias.</li>';
+                const snap = await getDocs(collection(db, "clases"));
                 snap.forEach(d => {
-                    const data = d.data();
-                    const li = document.createElement('li');
-                    li.className = "flex justify-between bg-gray-50 p-3 rounded border";
-                    li.innerHTML = `<div><p class="font-bold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.codigo||''}</p></div><button onclick="eliminarClase('${d.id}')" class="text-red-500 text-xs font-bold border p-1 rounded">Eliminar</button>`;
-                    listaUl.appendChild(li);
-                    selects.forEach(s => s.add(new Option(data.nombre, data.nombre)));
+                    const c = d.data();
+                    selectMateria.add(new Option(c.nombre, c.nombre));
                 });
             } catch (e) { console.error(e); }
         }
 
-        document.getElementById('form-add-clase').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('nueva-clase-nombre').value;
-            const codigo = document.getElementById('nueva-clase-id').value;
-            try {
-                await addDoc(collection(db, "clases"), { nombre, codigo, profesor_uid: usuarioActual.uid, creado: serverTimestamp() });
-                document.getElementById('nueva-clase-nombre').value=""; document.getElementById('nueva-clase-id').value="";
-                alert("Materia guardada."); cargarClases();
-            } catch (e) { alert("Error: "+e.message); }
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
+            if(confirm("¿Cerrar sesión?")) signOut(auth).then(() => window.location.href = "index.html");
         });
 
-        window.eliminarClase = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "clases", id)); cargarClases(); } };
+        function iniciarCamara() {
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, ()=>{});
+        }
 
-        window.consultarAsistencias = async () => {
-            const filtroClase = document.getElementById('filtro-clase').value;
-            const filtroFecha = document.getElementById('filtro-fecha').value;
-            const tbody = document.getElementById('tabla-body');
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-blue-500">Buscando...</td></tr>';
+        async function onScanSuccess(decodedText) {
+            const materia = selectMateria.value;
+            if (!materia) return alert("⚠️ Selecciona una materia primero.");
+
+            html5QrCode.pause();
+            msgStatus.innerText = "Verificando hora de red...";
+            
             try {
-                let q = query(collection(db, "asistencias"), orderBy("timestamp", "desc"));
-                if (filtroClase) q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
-                const snap = await getDocs(q);
-                tbody.innerHTML = ""; let count=0;
-                snap.forEach(doc => {
-                    const data = doc.data();
-                    const fechaObj = data.timestamp.toDate();
-                    let fechaFiltro = fechaObj.toISOString().split('T')[0];
-                    if (!filtroFecha || filtroFecha === fechaFiltro) {
-                        count++;
-                        tbody.innerHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-6 py-4">${fechaObj.toLocaleDateString()}</td><td class="px-6 py-4 font-mono text-xs">${fechaObj.toLocaleTimeString()}</td><td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td><td class="px-6 py-4">${data.alumno.matricula}</td><td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td></tr>`;
+                const dataQR = JSON.parse(decodedText);
+                
+                // 1. VALIDACIÓN ANTI-FRAUDE DE TIEMPO
+                const ahoraInternet = await obtenerHoraInternet();
+                const diferenciaTiempo = (ahoraInternet - dataQR.t) / 1000;
+
+                // Validación estricta: No aceptamos QRs de más de 30 seg, ni QRs del futuro
+                if (diferenciaTiempo > TIEMPO_MAXIMO_QR_SEGUNDOS) {
+                    throw new Error("🚫 CÓDIGO CADUCADO<br>Este QR es antiguo. Escanea el que está en la pantalla ahora.");
+                }
+                if (diferenciaTiempo < -5) { // Tolerancia de 5s para relojes desfasados ligeramente
+                    throw new Error("🚫 HORA INVÁLIDA<br>Tu reloj o el código tienen una hora incorrecta.");
+                }
+
+                if (dataQR.id !== materia) throw new Error(`QR Incorrecto.<br>Elegiste: <b>${materia}</b><br>QR es de: <b>${dataQR.id}</b>`);
+                
+                if (!navigator.geolocation) throw new Error("GPS requerido.");
+                
+                msgStatus.innerText = "Verificando ubicación...";
+
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const dist = calcularDistancia(LAT_SALON, LNG_SALON, pos.coords.latitude, pos.coords.longitude);
+                    if (dist > DISTANCIA_MAXIMA_METROS) {
+                        mostrarResultado(false, "Ubicación Incorrecta", `Estás a ${dist.toFixed(0)}m del salón.`);
+                    } else {
+                        // GUARDAR
+                        msgStatus.innerText = "Registrando...";
+                        await addDoc(collection(db, "asistencias"), {
+                            id_sesion: dataQR.id, qr_token: dataQR.t, alumno: datosUsuario,
+                            ubicacion: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+                            timestamp: serverTimestamp(), dispositivo: navigator.userAgent
+                        });
+
+                        msgStatus.innerText = "Actualizando estadísticas...";
+                        const stats = await calcularEstadisticas(materia);
+                        mostrarResultado(true, "¡Asistencia Registrada!", `Clase: ${materia}`, stats);
+                        html5QrCode.stop();
                     }
-                });
-                if(count===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay datos.</td></tr>';
-            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error: ${e.message}</td></tr>`; }
-        };
+                }, () => mostrarResultado(false, "Error GPS", "Activa ubicación."));
+            } catch (e) { mostrarResultado(false, "Error", e.message); }
+        }
 
-        window.exportarCSV = () => {
-            const rows = document.querySelectorAll('#tabla-body tr');
-            if (rows.length === 0 || rows[0].innerText.includes('No hay datos')) return alert("No hay datos para exportar.");
-            let csvContent = "\uFEFFFecha,Hora,Alumno,Matricula,Estado\n";
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td');
-                if(cols.length > 1) { const rowData = Array.from(cols).map(col => `"${col.innerText}"`).join(","); csvContent += rowData + "\n"; }
-            });
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`; link.click();
-        };
+        function mostrarResultado(exito, titulo, desc, stats = null) {
+            document.getElementById('step-scan').classList.add('hidden');
+            document.getElementById('step-result').classList.remove('hidden');
+            
+            const icon = document.getElementById('icon-result');
+            const title = document.getElementById('title-result');
+            const txt = document.getElementById('desc-result');
 
-        window.generarMatrizAsistencia = async () => {
-            const materia = document.getElementById('select-clase-reporte').value;
-            const thead = document.getElementById('matriz-head'); const tbody = document.getElementById('matriz-body'); const msg = document.getElementById('msg-reporte');
-            if(!materia) return alert("Selecciona materia");
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">Procesando...</td></tr>';
-            try {
-                const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia));
-                const snap = await getDocs(q);
-                if(snap.empty) { tbody.innerHTML='<tr><td colspan="10" class="text-center p-4">Sin registros.</td></tr>'; return; }
-                const fechasSet = new Set(); const alumnosMap = {};
-                snap.forEach(doc => {
-                    const d = doc.data(); const f = d.timestamp.toDate().toISOString().split('T')[0]; fechasSet.add(f);
-                    if(!alumnosMap[d.alumno.matricula]) alumnosMap[d.alumno.matricula] = { nombre: d.alumno.nombre, asistencias: new Set() };
-                    alumnosMap[d.alumno.matricula].asistencias.add(f);
-                });
-                const fechas = Array.from(fechasSet).sort();
-                let head = `<tr><th class="bg-gray-200 sticky left-0 z-10 w-64 text-left p-2">ALUMNO</th><th class="bg-blue-100 text-blue-800 p-2">%</th>`;
-                fechas.forEach(f => { const p=f.split('-'); head+=`<th class="bg-gray-100 min-w-[50px] p-2">${p[2]}/${p[1]}</th>`; });
-                thead.innerHTML = head + '</tr>'; tbody.innerHTML = "";
-                Object.keys(alumnosMap).sort((a,b)=>alumnosMap[a].nombre.localeCompare(alumnosMap[b].nombre)).forEach(mat => {
-                    const al = alumnosMap[mat]; const porc = Math.round((al.asistencias.size/fechas.length)*100);
-                    let color = porc<80 ? "text-red-600 font-bold" : (porc===100?"text-green-600 font-bold":"text-gray-700");
-                    let row = `<tr class="hover:bg-gray-50 transition"><td class="sticky left-0 bg-white border-r text-left font-bold text-gray-700 px-3 py-2 text-xs md:text-sm whitespace-nowrap">${al.nombre}</td><td class="${color} border-r bg-blue-50">${porc}%</td>`;
-                    fechas.forEach(f => row+=`<td class="${al.asistencias.has(f)?'bg-cell-present':'bg-cell-absent'}">${al.asistencias.has(f)?'1':'0'}</td>`);
-                    tbody.innerHTML += row + '</tr>';
-                });
-                msg.innerText = `Total: ${Object.keys(alumnosMap).length} alumnos, ${fechas.length} sesiones.`;
-            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="10" class="text-center text-red-500 p-4">Error: ${e.message}</td></tr>`; }
-        };
+            if(exito) {
+                icon.innerHTML = "✅"; icon.className = "text-5xl mb-2 text-green-500";
+                title.className = "text-xl font-bold text-green-700";
+                
+                if (stats) {
+                    const elPorc = document.getElementById('stat-nuevo-porc');
+                    elPorc.innerText = stats.porcentaje + "%";
+                    elPorc.className = "text-4xl font-bold " + (stats.porcentaje < 80 ? "text-red-500" : "text-blue-900");
+                    document.getElementById('stat-nuevo-detalles').innerText = `${stats.asistidas} de ${stats.totales} clases asistidas`;
+                }
+            } else {
+                icon.innerHTML = "❌"; icon.className = "text-5xl mb-2 text-red-500";
+                title.className = "text-xl font-bold text-red-700";
+                document.querySelector('.bg-blue-50').classList.add('hidden');
+            }
+            title.innerText = titulo;
+            txt.innerHTML = desc;
+        }
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
     </script>
 </body>
 </html>

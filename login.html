@@ -43,19 +43,22 @@
     </div>
 
     <script type="module">
-        // Importamos auth y db desde TU archivo de configuración
         import { auth, db } from './firebase-config.js'; 
-        
-        // Importamos las funciones necesarias de Firebase
-        import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const form = document.getElementById('auth-form');
         const emailInput = document.getElementById('email');
         const passInput = document.getElementById('password');
         const errorMsg = document.getElementById('error-msg');
         
-        // --- LÓGICA DE INICIO DE SESIÓN ---
+        // --- 1. LÓGICA DE REDIRECCIÓN A REGISTRO ---
+        // Al hacer clic, simplemente nos vamos a la otra página
+        document.getElementById('btn-register').addEventListener('click', () => {
+            window.location.href = "registro.html";
+        });
+
+        // --- 2. LÓGICA DE INICIO DE SESIÓN ---
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = emailInput.value;
@@ -64,11 +67,11 @@
             mostrarCargando(true);
 
             try {
-                // 1. Autenticar en Firebase Auth
+                // Autenticar en Firebase Auth
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
-                // 2. Verificar rol en Firestore
+                // Verificar rol en Firestore y redirigir
                 await checkRoleAndRedirect(user.uid);
 
             } catch (error) {
@@ -77,38 +80,6 @@
             }
         });
 
-        // --- LÓGICA DE REGISTRO ---
-        document.getElementById('btn-register').addEventListener('click', async () => {
-            const email = emailInput.value;
-            const password = passInput.value;
-
-            if(!email.includes('@')) return mostrarError("Escribe un correo válido");
-            if(password.length < 6) return mostrarError("La contraseña debe tener 6 caracteres o más");
-
-            mostrarCargando(true);
-
-            try {
-                // 1. Crear usuario en Auth
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-                
-                // 2. Guardar sus datos en la colección 'usuarios' (Por defecto ALUMNO)
-                await setDoc(doc(db, "usuarios", user.uid), {
-                    email: email,
-                    rol: "alumno", // <--- ROL POR DEFECTO
-                    fecha_registro: new Date()
-                });
-
-                alert("¡Cuenta creada! Redirigiendo...");
-                window.location.href = "escaner.html";
-                
-            } catch (error) {
-                mostrarError(error.code);
-                mostrarCargando(false);
-            }
-        });
-
-        // Función que decide a dónde va el usuario
         async function checkRoleAndRedirect(uid) {
             try {
                 const docRef = doc(db, "usuarios", uid);
@@ -122,12 +93,11 @@
                         window.location.href = "escaner.html";
                     }
                 } else {
-                    // Si no existe en la base de datos (raro), lo mandamos a alumno
+                    // Si no tiene datos (raro), lo mandamos al escaner por defecto
                     window.location.href = "escaner.html";
                 }
             } catch (e) {
-                console.error("Error leyendo rol:", e);
-                // En caso de error de lectura, dejar pasar como alumno por seguridad
+                console.error("Error verificando rol:", e);
                 window.location.href = "escaner.html";
             }
         }
@@ -135,8 +105,8 @@
         function mostrarError(code) {
             let msg = "Error desconocido: " + code;
             if(code === "auth/invalid-credential") msg = "Correo o contraseña incorrectos.";
-            if(code === "auth/email-already-in-use") msg = "Este correo ya está registrado.";
-            if(code === "auth/weak-password") msg = "La contraseña es muy débil (mínimo 6 caracteres).";
+            if(code === "auth/user-not-found") msg = "Usuario no encontrado. Crea una cuenta primero.";
+            if(code === "auth/wrong-password") msg = "Contraseña incorrecta.";
             if(code === "auth/invalid-email") msg = "El formato del correo no es válido.";
             
             errorMsg.innerText = msg;
@@ -146,7 +116,7 @@
         function mostrarCargando(estado) {
             const btn = document.getElementById('btn-login');
             if(estado) {
-                btn.innerText = "Cargando...";
+                btn.innerText = "Verificando...";
                 btn.disabled = true;
                 btn.classList.add('opacity-50');
             } else {

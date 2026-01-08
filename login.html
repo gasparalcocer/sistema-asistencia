@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Sistema UADY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full border-t-4 border-blue-900">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-blue-900">Bienvenido</h1>
+            <p class="text-gray-500 text-sm">Sistema de Asistencia</p>
+        </div>
+
+        <form id="auth-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Correo Institucional</label>
+                <input type="email" id="email" required class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="a1234@alumnos.uady.mx">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Contraseña</label>
+                <input type="password" id="password" required class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="******">
+            </div>
+            
+            <div id="error-msg" class="bg-red-100 text-red-700 p-2 rounded text-xs text-center hidden font-bold"></div>
+
+            <button type="submit" id="btn-login" class="w-full bg-blue-900 text-white py-2 rounded hover:bg-blue-800 transition font-bold shadow-md">
+                Iniciar Sesión
+            </button>
+            
+            <div class="relative flex py-2 items-center">
+                <div class="flex-grow border-t border-gray-300"></div>
+                <span class="flex-shrink-0 mx-4 text-gray-400 text-xs">O</span>
+                <div class="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <button type="button" id="btn-register" class="w-full bg-white border border-gray-300 text-gray-700 py-2 rounded hover:bg-gray-50 transition text-sm font-medium">
+                Crear cuenta nueva
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        // Importamos auth y db desde TU archivo de configuración
+        import { auth, db } from './firebase-config.js'; 
+        
+        // Importamos las funciones necesarias de Firebase
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const form = document.getElementById('auth-form');
+        const emailInput = document.getElementById('email');
+        const passInput = document.getElementById('password');
+        const errorMsg = document.getElementById('error-msg');
+        
+        // --- LÓGICA DE INICIO DE SESIÓN ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passInput.value;
+            
+            mostrarCargando(true);
+
+            try {
+                // 1. Autenticar en Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // 2. Verificar rol en Firestore
+                await checkRoleAndRedirect(user.uid);
+
+            } catch (error) {
+                mostrarError(error.code);
+                mostrarCargando(false);
+            }
+        });
+
+        // --- LÓGICA DE REGISTRO ---
+        document.getElementById('btn-register').addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passInput.value;
+
+            if(!email.includes('@')) return mostrarError("Escribe un correo válido");
+            if(password.length < 6) return mostrarError("La contraseña debe tener 6 caracteres o más");
+
+            mostrarCargando(true);
+
+            try {
+                // 1. Crear usuario en Auth
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // 2. Guardar sus datos en la colección 'usuarios' (Por defecto ALUMNO)
+                await setDoc(doc(db, "usuarios", user.uid), {
+                    email: email,
+                    rol: "alumno", // <--- ROL POR DEFECTO
+                    fecha_registro: new Date()
+                });
+
+                alert("¡Cuenta creada! Redirigiendo...");
+                window.location.href = "escaner.html";
+                
+            } catch (error) {
+                mostrarError(error.code);
+                mostrarCargando(false);
+            }
+        });
+
+        // Función que decide a dónde va el usuario
+        async function checkRoleAndRedirect(uid) {
+            try {
+                const docRef = doc(db, "usuarios", uid);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.rol === "profesor") {
+                        window.location.href = "generador.html";
+                    } else {
+                        window.location.href = "escaner.html";
+                    }
+                } else {
+                    // Si no existe en la base de datos (raro), lo mandamos a alumno
+                    window.location.href = "escaner.html";
+                }
+            } catch (e) {
+                console.error("Error leyendo rol:", e);
+                // En caso de error de lectura, dejar pasar como alumno por seguridad
+                window.location.href = "escaner.html";
+            }
+        }
+
+        function mostrarError(code) {
+            let msg = "Error desconocido: " + code;
+            if(code === "auth/invalid-credential") msg = "Correo o contraseña incorrectos.";
+            if(code === "auth/email-already-in-use") msg = "Este correo ya está registrado.";
+            if(code === "auth/weak-password") msg = "La contraseña es muy débil (mínimo 6 caracteres).";
+            if(code === "auth/invalid-email") msg = "El formato del correo no es válido.";
+            
+            errorMsg.innerText = msg;
+            errorMsg.classList.remove('hidden');
+        }
+
+        function mostrarCargando(estado) {
+            const btn = document.getElementById('btn-login');
+            if(estado) {
+                btn.innerText = "Cargando...";
+                btn.disabled = true;
+                btn.classList.add('opacity-50');
+            } else {
+                btn.innerText = "Iniciar Sesión";
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+    </script>
+</body>
+</html>

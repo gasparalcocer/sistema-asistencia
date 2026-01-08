@@ -3,195 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alumno - Registrar Asistencia</title>
+    <title>Scanner UADY - Alumno</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        /* Aseguramos que el video ocupe espacio */
-        #reader { width: 100%; min-height: 300px; background: #000; }
+        #reader { width: 100%; min-height: 300px; background: #000; border-radius: 8px; }
         video { object-fit: cover; border-radius: 8px; }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col items-center min-h-screen p-4">
 
-    <div class="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden mt-4">
-        <div class="bg-blue-900 p-4 text-white text-center">
-            <h1 class="text-xl font-bold">Escáner UADY</h1>
+    <div id="pantalla-carga" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-900 mb-4"></div>
+        <p class="text-blue-900 font-bold">Cargando tu perfil...</p>
+    </div>
+
+    <div id="interfaz-principal" class="hidden w-full max-w-md">
+        
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-900">
+            <p class="text-xs text-gray-500 uppercase">Bienvenido, Alumno</p>
+            <h2 id="user-nombre" class="text-lg font-bold text-gray-800">Cargando...</h2>
+            <p id="user-matricula" class="text-sm text-blue-600 font-mono font-bold">...</p>
         </div>
 
-        <div class="p-6">
-            <div id="step-1">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Matrícula</label>
-                <input type="text" id="matricula" placeholder="A12345678" class="w-full p-3 border rounded-lg mb-4 uppercase bg-gray-50">
-                
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                <input type="text" id="nombre" placeholder="Nombre Completo" class="w-full p-3 border rounded-lg mb-6 bg-gray-50">
-                
-                <button id="btn-start" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow-lg transition transform active:scale-95">
-                    ABRIR CÁMARA
-                </button>
+        <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+            <div class="bg-blue-900 p-3 text-white text-center flex justify-between items-center">
+                <h1 class="text-lg font-bold">Escaner de Asistencia</h1>
+                <button id="btn-cerrar-sesion" class="text-xs bg-red-500 px-2 py-1 rounded hover:bg-red-600">Salir</button>
             </div>
 
-            <div id="step-2" class="hidden">
-                <p class="text-xs text-center text-gray-500 mb-2">Enfoca el código QR</p>
-                
-                <div id="reader" class="rounded-lg overflow-hidden relative"></div>
-                
-                <div id="loading-msg" class="text-center mt-4 text-blue-600 animate-pulse">
-                    Iniciando cámara...
+            <div class="p-4">
+                <div id="step-scan">
+                    <p class="text-xs text-center text-gray-500 mb-2">Apunta al código QR del profesor</p>
+                    <div id="reader"></div>
+                    <div id="msg-status" class="mt-4 text-center text-sm font-bold text-gray-600">Cámara lista</div>
                 </div>
 
-                <div id="debug-log" class="mt-4 p-2 bg-gray-100 text-xs text-red-600 font-mono h-24 overflow-y-auto hidden border border-red-200 rounded"></div>
-
-                <button onclick="location.reload()" class="mt-6 w-full py-2 text-gray-500 border rounded hover:bg-gray-50">
-                    Cancelar / Regresar
-                </button>
+                <div id="step-result" class="hidden text-center py-6">
+                    <div id="icon-result" class="text-5xl mb-2"></div>
+                    <h2 id="title-result" class="text-xl font-bold"></h2>
+                    <p id="desc-result" class="text-gray-600 text-sm"></p>
+                    <button onclick="location.reload()" class="mt-6 text-blue-600 underline text-sm">Escanear otro</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { db, collection, addDoc, serverTimestamp } from './firebase-config.js';
+        import { db, auth, collection, addDoc, serverTimestamp } from './firebase-config.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN ANTIFRAUDE ---
-        const DISTANCIA_MAXIMA_METROS = 200; // Ampliado para pruebas
-        const TIEMPO_MAXIMO_QR_SEGUNDOS = 120; // Ampliado para pruebas
-        
-        // Coordenadas UADY (Ejemplo: Facultad Ingeniería)
-        // SI ESTÁS PROBANDO EN CASA, CAMBIA ESTO A TUS COORDENADAS O PON UN RADIO MUY GRANDE
+        // --- CONFIGURACIÓN ---
+        const DISTANCIA_MAXIMA_METROS = 200; 
+        const TIEMPO_MAXIMO_QR_SEGUNDOS = 120;
+        // Coordenadas UADY (FIUADY)
         const LAT_SALON = 21.0483; 
         const LNG_SALON = -89.6433; 
-        // --------------------------------
 
-        const step1 = document.getElementById('step-1');
-        const step2 = document.getElementById('step-2');
-        const debugLog = document.getElementById('debug-log');
+        // Variables Globales del Usuario
+        let datosUsuario = { nombre: '', matricula: '' };
         let html5QrCode;
 
-        // Función para imprimir errores en la pantalla del celular
-        function log(msg) {
-            console.log(msg);
-            debugLog.classList.remove('hidden');
-            debugLog.innerHTML += `> ${msg}<br>`;
-        }
+        // Elementos DOM
+        const pantallaCarga = document.getElementById('pantalla-carga');
+        const interfazPrincipal = document.getElementById('interfaz-principal');
+        const txtNombre = document.getElementById('user-nombre');
+        const txtMatricula = document.getElementById('user-matricula');
+        const stepScan = document.getElementById('step-scan');
+        const stepResult = document.getElementById('step-result');
+        const msgStatus = document.getElementById('msg-status');
 
-        document.getElementById('btn-start').addEventListener('click', async () => {
-            const matricula = document.getElementById('matricula').value;
-            const nombre = document.getElementById('nombre').value;
-
-            if (!matricula || !nombre) return alert("Faltan datos");
-
-            // Cambio de pantalla
-            step1.classList.add('hidden');
-            step2.classList.remove('hidden');
-
-            iniciarCamaraTrasera(matricula, nombre);
+        // 1. VERIFICAR SESIÓN Y CARGAR DATOS
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    // Buscar datos extra en Firestore (nombre, matricula)
+                    const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        datosUsuario.nombre = data.nombre;
+                        datosUsuario.matricula = data.matricula;
+                        
+                        // Mostrar en interfaz
+                        txtNombre.innerText = datosUsuario.nombre;
+                        txtMatricula.innerText = datosUsuario.matricula;
+                        
+                        // Mostrar interfaz
+                        pantallaCarga.classList.add('hidden');
+                        interfazPrincipal.classList.remove('hidden');
+                        
+                        // Iniciar cámara automáticamente
+                        iniciarCamara();
+                    } else {
+                        alert("Error: Perfil de usuario incompleto.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Error al cargar perfil.");
+                }
+            } else {
+                window.location.href = "login.html";
+            }
         });
 
-        function iniciarCamaraTrasera(matricula, nombre) {
+        // Botón Cerrar Sesión
+        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
+            signOut(auth).then(() => window.location.href = "index.html");
+        });
+
+        function iniciarCamara() {
             html5QrCode = new Html5Qrcode("reader");
-            
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            // INTENTO 1: Pedir explícitamente la cámara trasera ("environment")
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText) => handleScan(decodedText, matricula, nombre),
-                (errorMessage) => { 
-                    // Errores de lectura frame a frame (normal, ignorar)
-                }
-            ).then(() => {
-                document.getElementById('loading-msg').classList.add('hidden');
-                log("Cámara iniciada correctamente.");
-            })
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err)=>{})
             .catch(err => {
-                log("Error iniciando cámara trasera: " + err);
-                log("Intentando cámara genérica...");
-                
-                // INTENTO 2: Si falla la trasera, intentar cualquier cámara
-                html5QrCode.start(
-                    { facingMode: "user" }, 
-                    config, 
-                    (decodedText) => handleScan(decodedText, matricula, nombre),
-                    (err) => {}
-                ).catch(errFatal => {
-                    log("ERROR FATAL: No se pudo abrir ninguna cámara. " + errFatal);
-                    alert("No pudimos acceder a la cámara. Revisa los permisos del navegador.");
-                });
+                msgStatus.innerText = "Error: No se pudo abrir la cámara trasera.";
+                // Intentar cámara frontal si falla
+                html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, (err)=>{});
             });
         }
 
-        async function handleScan(decodedText, matricula, nombre) {
-            // Pausar escáner
-            html5QrCode.pause();
-            document.getElementById('loading-msg').classList.remove('hidden');
-            document.getElementById('loading-msg').innerText = "Procesando...";
-            document.getElementById('loading-msg').className = "text-center mt-4 text-green-600 font-bold";
-
+        async function onScanSuccess(decodedText) {
+            html5QrCode.pause(); // Congelar cámara
+            msgStatus.innerText = "Procesando código...";
+            
             try {
                 const dataQR = JSON.parse(decodedText);
-                
+
                 // 1. Validar Tiempo
                 const ahora = new Date().getTime();
-                if ((ahora - dataQR.t) / 1000 > TIEMPO_MAXIMO_QR_SEGUNDOS) {
-                    throw new Error("El código QR venció.");
-                }
+                if ((ahora - dataQR.t) / 1000 > TIEMPO_MAXIMO_QR_SEGUNDOS) throw new Error("El código QR ha caducado.");
 
                 // 2. Validar GPS
-                if (!navigator.geolocation) throw new Error("GPS no soportado");
+                if (!navigator.geolocation) throw new Error("Tu dispositivo no tiene GPS.");
                 
                 navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const d = calcularDistancia(LAT_SALON, LNG_SALON, pos.coords.latitude, pos.coords.longitude);
-                    log(`Distancia calculada: ${d.toFixed(2)} metros`);
-
-                    if (d > DISTANCIA_MAXIMA_METROS) {
-                        alert(`Estás a ${d.toFixed(0)}m del salón. Demasiado lejos.`);
-                        html5QrCode.resume(); // Permitir intentar de nuevo
+                    const dist = calcularDistancia(LAT_SALON, LNG_SALON, pos.coords.latitude, pos.coords.longitude);
+                    
+                    if (dist > DISTANCIA_MAXIMA_METROS) {
+                        mostrarResultado(false, "Ubicación Incorrecta", `Estás a ${dist.toFixed(0)}m del salón.`);
                     } else {
-                        // ENVIAR
-                        await enviarFirebase(matricula, nombre, dataQR, pos.coords, d);
+                        // ENVIAR A FIREBASE
+                        await addDoc(collection(db, "asistencias"), {
+                            id_sesion: dataQR.id,
+                            qr_token: dataQR.t,
+                            alumno: datosUsuario, // <--- Usamos los datos cargados del perfil
+                            ubicacion: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+                            timestamp: serverTimestamp(),
+                            dispositivo: navigator.userAgent
+                        });
+                        mostrarResultado(true, "Asistencia Registrada", "Tus datos se guardaron correctamente.");
+                        html5QrCode.stop();
                     }
                 }, (err) => {
-                    alert("Error GPS: " + err.message);
-                    html5QrCode.resume();
+                    mostrarResultado(false, "Error GPS", "Debes activar tu ubicación.");
                 });
 
             } catch (e) {
-                alert("Error: " + e.message);
-                html5QrCode.resume();
+                mostrarResultado(false, "Error", e.message);
             }
         }
 
-        async function enviarFirebase(matricula, nombre, dataQR, coords, dist) {
-            try {
-                await addDoc(collection(db, "asistencias"), {
-                    id_sesion: dataQR.id,
-                    qr_token: dataQR.t,
-                    alumno: { matricula, nombre },
-                    ubicacion: { lat: coords.latitude, lng: coords.longitude },
-                    timestamp: serverTimestamp(),
-                    dispositivo: navigator.userAgent
-                });
-                
-                // Éxito visual
-                step2.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64">
-                        <div class="bg-green-100 p-4 rounded-full mb-4">
-                            <svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-green-700">¡Asistencia Registrada!</h2>
-                        <button onclick="location.reload()" class="mt-8 text-blue-600 underline">Nuevo registro</button>
-                    </div>
-                `;
-                html5QrCode.stop(); // Apagar cámara
-            } catch (e) {
-                log("Error Firebase: " + e.message);
-                alert("Hubo un error al guardar. Revisa la conexión.");
+        function mostrarResultado(exito, titulo, desc) {
+            stepScan.classList.add('hidden');
+            stepResult.classList.remove('hidden');
+            
+            const icon = document.getElementById('icon-result');
+            const title = document.getElementById('title-result');
+            const txt = document.getElementById('desc-result');
+
+            if(exito) {
+                icon.innerHTML = "✅";
+                icon.className = "text-5xl mb-2 text-green-500";
+                title.innerText = titulo;
+                title.className = "text-xl font-bold text-green-700";
+            } else {
+                icon.innerHTML = "❌";
+                icon.className = "text-5xl mb-2 text-red-500";
+                title.innerText = titulo;
+                title.className = "text-xl font-bold text-red-700";
             }
+            txt.innerText = desc;
         }
 
-        // Fórmula de distancia
         function calcularDistancia(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
             const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;

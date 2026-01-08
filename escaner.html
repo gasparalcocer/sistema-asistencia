@@ -66,8 +66,46 @@
         });
 
         function iniciarEscaner(matricula, nombre) {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-            html5QrcodeScanner.render((decodedText) => onScanSuccess(decodedText, matricula, nombre), (errorMessage) => {});
+            // Limpiamos mensajes anteriores
+            document.getElementById('reader').innerHTML = "";
+            
+            // Configuración explícita para móviles
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                // Intentar forzar la cámara trasera (Environment)
+                videoConstraints: {
+                    facingMode: "environment" 
+                }
+            };
+
+            try {
+                html5QrcodeScanner = new Html5QrcodeScanner("reader", config);
+                
+                html5QrcodeScanner.render(
+                    (decodedText) => onScanSuccess(decodedText, matricula, nombre), 
+                    (errorMessage) => {
+                        // Ignoramos errores de lectura continua, solo nos importan los de inicio
+                    }
+                );
+            } catch (e) {
+                // Si falla al arrancar, mostramos el error en pantalla
+                mostrarError("Error crítico al iniciar cámara: " + e.message);
+            }
+        }
+    // Pega esto DEBAJO de la función iniciarEscaner
+        
+        // Detección de errores de cámara comunes
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length) {
+                console.log("Cámaras encontradas:", devices);
+            } else {
+                mostrarError("No se detectaron cámaras. ¿Estás en un celular?");
+            }
+        }).catch(err => {
+            mostrarError("ERROR DE PERMISOS: " + err);
+        });
         }
 
         async function onScanSuccess(decodedText, matricula, nombre) {
@@ -152,4 +190,5 @@
         }
     </script>
 </body>
+
 </html>

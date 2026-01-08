@@ -17,6 +17,9 @@
             100% { background-color: white; transform: scale(1); }
         }
         .nuevo-registro { animation: highlight 2s ease-out; }
+        /* Estilo para el botón de eliminar */
+        .btn-delete { opacity: 0.6; transition: opacity 0.2s; }
+        .registro-item:hover .btn-delete { opacity: 1; }
     </style>
 </head>
 <body id="main-body" class="bg-gray-100 min-h-screen font-sans" style="display: none;">
@@ -96,15 +99,17 @@
 
                             <div class="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-sm">
                                 <h4 class="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                                    <span>✍️</span> Registro Manual
+                                    <span>✍️</span> Registro Rápido
                                 </h4>
-                                <p class="text-xs text-yellow-600 mb-3">Para alumnos sin celular/internet</p>
+                                <p class="text-xs text-yellow-600 mb-3">Escribe la matrícula, el sistema buscará el nombre.</p>
                                 <div class="space-y-2">
-                                    <input type="text" id="manual-matricula" placeholder="Matrícula" class="w-full p-2 text-sm border rounded uppercase">
-                                    <input type="text" id="manual-nombre" placeholder="Nombre Completo" class="w-full p-2 text-sm border rounded uppercase">
-                                    <button onclick="registrarManual()" class="w-full bg-yellow-600 text-white text-sm font-bold py-2 rounded hover:bg-yellow-700 transition">
-                                        Registrar Alumno
-                                    </button>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="manual-matricula" placeholder="Matrícula (Ej: A1234)" class="w-full p-2 text-sm border rounded uppercase focus:ring-2 focus:ring-yellow-500">
+                                        <button onclick="registrarManual()" class="bg-yellow-600 text-white px-4 py-2 rounded font-bold hover:bg-yellow-700 transition shadow">
+                                            OK
+                                        </button>
+                                    </div>
+                                    <p id="manual-status" class="text-xs text-center text-gray-400 italic h-4"></p>
                                 </div>
                             </div>
                         </div>
@@ -146,9 +151,7 @@
                         <input type="date" id="filtro-fecha" class="w-full p-2 border rounded text-sm">
                     </div>
                     <div class="flex items-end">
-                        <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">
-                            Buscar Registros
-                        </button>
+                        <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">Buscar</button>
                     </div>
                 </div>
                 <div class="overflow-x-auto border rounded">
@@ -163,7 +166,7 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-body">
-                            <tr><td colspan="5" class="text-center py-4">Selecciona filtros para ver detalles</td></tr>
+                            <tr><td colspan="5" class="text-center py-4">Selecciona filtros...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -173,24 +176,15 @@
         <div id="view-reporte" class="view-section hidden">
             <div class="bg-white p-6 rounded-lg shadow">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
-                    <div>
-                        <h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2>
-                        <p class="text-sm text-gray-500">Vista tipo Excel por fechas</p>
-                    </div>
+                    <div><h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2><p class="text-sm text-gray-500">Vista tipo Excel por fechas</p></div>
                     <div class="mt-4 md:mt-0 flex gap-2">
-                        <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]">
-                            <option value="">-- Selecciona Materia --</option>
-                        </select>
-                        <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow">
-                            Generar
-                        </button>
+                        <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]"><option value="">-- Selecciona Materia --</option></select>
+                        <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow">Generar</button>
                     </div>
                 </div>
                 <div class="overflow-x-auto bg-white border rounded-lg max-h-[500px]">
                     <table class="w-full table-matrix border-collapse relative">
-                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs sticky top-0 z-20 shadow-sm" id="matriz-head">
-                            <tr><th class="p-4">Selecciona una materia arriba</th></tr>
-                        </thead>
+                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs sticky top-0 z-20 shadow-sm" id="matriz-head"><tr><th class="p-4">Selecciona una materia arriba</th></tr></thead>
                         <tbody class="text-gray-600" id="matriz-body"></tbody>
                     </table>
                 </div>
@@ -203,22 +197,17 @@
                 <div class="bg-white p-6 rounded-lg shadow h-fit border-t-4 border-green-600">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">➕ Nueva Materia</h2>
                     <form id="form-add-clase">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre</label>
-                        <input type="text" id="nueva-clase-nombre" required placeholder="Ej: Cálculo I" class="w-full p-2 border rounded mb-3">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Código</label>
-                        <input type="text" id="nueva-clase-id" placeholder="Ej: MAT-101" class="w-full p-2 border rounded mb-4">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre</label><input type="text" id="nueva-clase-nombre" required class="w-full p-2 border rounded mb-3">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Código</label><input type="text" id="nueva-clase-id" class="w-full p-2 border rounded mb-4">
                         <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Guardar</button>
                     </form>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">📚 Mis Materias</h2>
-                    <ul id="lista-clases" class="space-y-2">
-                        <li class="text-gray-400 text-sm italic">Cargando...</li>
-                    </ul>
+                    <ul id="lista-clases" class="space-y-2"><li class="text-gray-400 text-sm italic">Cargando...</li></ul>
                 </div>
             </div>
         </div>
-
     </main>
 
     <script type="module">
@@ -231,23 +220,21 @@
         let qrGenerator;
         let claseActiva = null;
         let unsubscribeLive = null;
+        
+        // Variable para contar asistentes en tiempo real
+        let asistentesVivos = 0;
 
-        // --- NAVEGACIÓN ---
         window.cambiarTab = (tabName) => {
             if (claseActiva && tabName !== 'qr') {
-                if(confirm("Salir detendrá la sesión actual. ¿Continuar?")) detenerClase();
-                else return;
+                if(confirm("Salir detendrá la sesión actual. ¿Continuar?")) detenerClase(); else return;
             }
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            document.querySelectorAll('button[id^="tab-"]').forEach(btn => {
-                btn.classList.remove('tab-active'); btn.classList.add('tab-inactive');
-            });
+            document.querySelectorAll('button[id^="tab-"]').forEach(btn => { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); });
             const activeBtn = document.getElementById(`tab-${tabName}`);
             activeBtn.classList.add('tab-active'); activeBtn.classList.remove('tab-inactive');
         };
 
-        // --- AUTH ---
         onAuthStateChanged(auth, async (user) => {
             const loader = document.getElementById('loader');
             const mainBody = document.getElementById('main-body');
@@ -270,7 +257,6 @@
             signOut(auth).then(() => window.location.href = "index.html");
         });
 
-        // --- QR VIVO & MANUAL ---
         document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
             const nombreClase = document.getElementById('select-clase-qr').value;
             if(!nombreClase) return alert("Selecciona una materia");
@@ -294,36 +280,51 @@
             document.getElementById('config-qr-container').classList.remove('hidden');
             claseActiva = null;
             document.getElementById('lista-asistentes-vivo').innerHTML = '<li class="text-center text-gray-400 text-sm py-10 italic">Esperando registros...</li>';
+            asistentesVivos = 0;
             document.getElementById('contador-vivo').innerText = "0";
             document.getElementById('manual-matricula').value = "";
-            document.getElementById('manual-nombre').value = "";
+            document.getElementById('manual-status').innerText = "";
         };
 
-        // --- NUEVA FUNCIÓN DE REGISTRO MANUAL ---
         window.registrarManual = async () => {
             const mat = document.getElementById('manual-matricula').value.toUpperCase().trim();
-            const nom = document.getElementById('manual-nombre').value.toUpperCase().trim();
+            const statusEl = document.getElementById('manual-status');
             
-            if(!mat || !nom) return alert("Por favor escribe la matrícula y el nombre.");
+            if(!mat) return;
+            statusEl.innerText = "Buscando alumno...";
             
             try {
-                // Simplemente guardamos en Firebase como si hubiera escaneado
+                const q = query(collection(db, "usuarios"), where("matricula", "==", mat));
+                const querySnapshot = await getDocs(q);
+                let nombreFinal = "ALUMNO EXTERNO"; 
+                if (!querySnapshot.empty) { nombreFinal = querySnapshot.docs[0].data().nombre; }
+
                 await addDoc(collection(db, "asistencias"), {
                     id_sesion: claseActiva,
                     qr_token: new Date().getTime(),
-                    alumno: { nombre: nom, matricula: mat },
-                    ubicacion: { lat: 0, lng: 0, manual: true }, // Marcamos como manual
+                    alumno: { nombre: nombreFinal, matricula: mat },
+                    ubicacion: { lat: 0, lng: 0, manual: true },
                     timestamp: serverTimestamp(),
                     dispositivo: "Registro Manual Docente"
                 });
-                
-                // Limpiamos los campos
                 document.getElementById('manual-matricula').value = "";
-                document.getElementById('manual-nombre').value = "";
-                
-                // No necesitamos alertar éxito, aparecerá en el monitor en vivo automáticamente
+                statusEl.innerText = `✓ Registrado: ${nombreFinal}`;
+                setTimeout(() => statusEl.innerText = "", 3000);
             } catch (e) {
-                alert("Error al registrar: " + e.message);
+                statusEl.innerText = "Error: " + e.message;
+                if(e.message.includes("index")) alert("Falta índice en 'usuarios'. Revisa consola.");
+            }
+        };
+
+        // --- NUEVA FUNCIÓN PARA ELIMINAR DEL VIVO ---
+        window.eliminarRegistroVivo = async (idAsistencia) => {
+            if(confirm("¿Eliminar este registro de asistencia?")) {
+                try {
+                    await deleteDoc(doc(db, "asistencias", idAsistencia));
+                    // El onSnapshot se encargará de actualizar la vista automáticamente
+                } catch (e) {
+                    alert("Error eliminando: " + e.message);
+                }
             }
         };
 
@@ -331,29 +332,55 @@
             const listaEl = document.getElementById('lista-asistentes-vivo');
             const contadorEl = document.getElementById('contador-vivo');
             const horaInicio = new Date();
-            const alumnosUnicos = new Set();
             const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia), where("timestamp", ">=", horaInicio), orderBy("timestamp", "desc"));
+            
             unsubscribeLive = onSnapshot(q, (snapshot) => {
-                if (snapshot.empty) return;
                 snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    const docId = change.doc.id;
+
+                    // CASO 1: NUEVO REGISTRO
                     if (change.type === "added") {
-                        const data = change.doc.data();
                         const msgEsperando = document.getElementById('msg-esperando');
                         if(msgEsperando) msgEsperando.remove();
-                        if (!alumnosUnicos.has(data.alumno.matricula)) {
-                            alumnosUnicos.add(data.alumno.matricula);
-                            contadorEl.innerText = alumnosUnicos.size;
-                        }
+                        
+                        asistentesVivos++;
+                        contadorEl.innerText = asistentesVivos;
+                        
                         const hora = data.timestamp ? data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : "Reciente";
-                        // Distinguir visualmente si fue manual
                         const esManual = data.ubicacion && data.ubicacion.manual;
                         const icon = esManual ? "✍️" : "📱";
-                        const estiloExtra = esManual ? "border-yellow-400 bg-yellow-50" : "border-green-500 bg-white";
-
+                        const estilo = esManual ? "border-yellow-400 bg-yellow-50" : "border-green-500 bg-white";
+                        
+                        // Añadimos ID al LI para poder borrarlo luego si hace falta
                         const li = document.createElement('li');
-                        li.className = `flex justify-between items-center p-3 rounded shadow-sm border-l-4 nuevo-registro ${estiloExtra}`;
-                        li.innerHTML = `<div><p class="font-bold text-gray-800 text-sm uppercase">${icon} ${data.alumno.nombre}</p><p class="text-xs text-gray-500">${data.alumno.matricula}</p></div><span class="text-xs font-mono text-gray-400 font-bold">${hora}</span>`;
+                        li.id = `asistencia-${docId}`;
+                        li.className = `registro-item flex justify-between items-center p-3 rounded shadow-sm border-l-4 nuevo-registro ${estilo} group`;
+                        li.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <p class="font-bold text-gray-800 text-sm uppercase">${icon} ${data.alumno.nombre}</p>
+                                    <p class="text-xs text-gray-500">${data.alumno.matricula}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-mono text-gray-400 font-bold">${hora}</span>
+                                <button onclick="eliminarRegistroVivo('${docId}')" class="btn-delete text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Eliminar Asistencia">
+                                    🗑️
+                                </button>
+                            </div>
+                        `;
                         listaEl.prepend(li);
+                    }
+                    
+                    // CASO 2: ELIMINADO (Esto pasa cuando borras con el botón 🗑️)
+                    if (change.type === "removed") {
+                        const liToRemove = document.getElementById(`asistencia-${docId}`);
+                        if (liToRemove) {
+                            liToRemove.remove();
+                            asistentesVivos--;
+                            contadorEl.innerText = asistentesVivos;
+                        }
                     }
                 });
             }, (error) => { if(error.message.includes("index")) alert("⚠️ Revisa la consola para crear el índice."); });
@@ -365,7 +392,6 @@
             qrGenerator.value = data;
         }
 
-        // --- GESTIÓN CLASES ---
         async function cargarClases() {
             const listaUl = document.getElementById('lista-clases');
             const selects = [document.getElementById('select-clase-qr'), document.getElementById('filtro-clase'), document.getElementById('select-clase-reporte')];
@@ -398,7 +424,6 @@
 
         window.eliminarClase = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "clases", id)); cargarClases(); } };
 
-        // --- HISTORIAL & EXPORTAR ---
         window.consultarAsistencias = async () => {
             const filtroClase = document.getElementById('filtro-clase').value;
             const filtroFecha = document.getElementById('filtro-fecha').value;
@@ -415,18 +440,11 @@
                     let fechaFiltro = fechaObj.toISOString().split('T')[0];
                     if (!filtroFecha || filtroFecha === fechaFiltro) {
                         count++;
-                        tbody.innerHTML += `
-                            <tr class="bg-white border-b hover:bg-gray-50">
-                                <td class="px-6 py-4">${fechaObj.toLocaleDateString()}</td>
-                                <td class="px-6 py-4 font-mono text-xs">${fechaObj.toLocaleTimeString()}</td>
-                                <td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td>
-                                <td class="px-6 py-4">${data.alumno.matricula}</td>
-                                <td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td>
-                            </tr>`;
+                        tbody.innerHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-6 py-4">${fechaObj.toLocaleDateString()}</td><td class="px-6 py-4 font-mono text-xs">${fechaObj.toLocaleTimeString()}</td><td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td><td class="px-6 py-4">${data.alumno.matricula}</td><td class="px-6 py-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span></td></tr>`;
                     }
                 });
                 if(count===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay datos.</td></tr>';
-            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error (crear índice): ${e.message}</td></tr>`; }
+            } catch (e) { console.error(e); tbody.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error: ${e.message}</td></tr>`; }
         };
 
         window.exportarCSV = () => {
@@ -435,19 +453,12 @@
             let csvContent = "\uFEFFFecha,Hora,Alumno,Matricula,Estado\n";
             rows.forEach(row => {
                 const cols = row.querySelectorAll('td');
-                if(cols.length > 1) {
-                    const rowData = Array.from(cols).map(col => `"${col.innerText}"`).join(",");
-                    csvContent += rowData + "\n";
-                }
+                if(cols.length > 1) { const rowData = Array.from(cols).map(col => `"${col.innerText}"`).join(","); csvContent += rowData + "\n"; }
             });
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`; link.click();
         };
 
-        // --- REPORTE GLOBAL ---
         window.generarMatrizAsistencia = async () => {
             const materia = document.getElementById('select-clase-reporte').value;
             const thead = document.getElementById('matriz-head'); const tbody = document.getElementById('matriz-body'); const msg = document.getElementById('msg-reporte');
@@ -459,20 +470,16 @@
                 if(snap.empty) { tbody.innerHTML='<tr><td colspan="10" class="text-center p-4">Sin registros.</td></tr>'; return; }
                 const fechasSet = new Set(); const alumnosMap = {};
                 snap.forEach(doc => {
-                    const d = doc.data();
-                    const f = d.timestamp.toDate().toISOString().split('T')[0];
-                    fechasSet.add(f);
+                    const d = doc.data(); const f = d.timestamp.toDate().toISOString().split('T')[0]; fechasSet.add(f);
                     if(!alumnosMap[d.alumno.matricula]) alumnosMap[d.alumno.matricula] = { nombre: d.alumno.nombre, asistencias: new Set() };
                     alumnosMap[d.alumno.matricula].asistencias.add(f);
                 });
                 const fechas = Array.from(fechasSet).sort();
                 let head = `<tr><th class="bg-gray-200 sticky left-0 z-10 w-64 text-left p-2">ALUMNO</th><th class="bg-blue-100 text-blue-800 p-2">%</th>`;
                 fechas.forEach(f => { const p=f.split('-'); head+=`<th class="bg-gray-100 min-w-[50px] p-2">${p[2]}/${p[1]}</th>`; });
-                thead.innerHTML = head + '</tr>';
-                tbody.innerHTML = "";
+                thead.innerHTML = head + '</tr>'; tbody.innerHTML = "";
                 Object.keys(alumnosMap).sort((a,b)=>alumnosMap[a].nombre.localeCompare(alumnosMap[b].nombre)).forEach(mat => {
-                    const al = alumnosMap[mat];
-                    const porc = Math.round((al.asistencias.size/fechas.length)*100);
+                    const al = alumnosMap[mat]; const porc = Math.round((al.asistencias.size/fechas.length)*100);
                     let color = porc<80 ? "text-red-600 font-bold" : (porc===100?"text-green-600 font-bold":"text-gray-700");
                     let row = `<tr class="hover:bg-gray-50 transition"><td class="sticky left-0 bg-white border-r text-left font-bold text-gray-700 px-3 py-2 text-xs md:text-sm whitespace-nowrap">${al.nombre}</td><td class="${color} border-r bg-blue-50">${porc}%</td>`;
                     fechas.forEach(f => row+=`<td class="${al.asistencias.has(f)?'bg-cell-present':'bg-cell-absent'}">${al.asistencias.has(f)?'1':'0'}</td>`);

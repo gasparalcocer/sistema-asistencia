@@ -18,8 +18,6 @@
             100% { background-color: white; transform: scale(1); }
         }
         .nuevo-registro { animation: highlight 2s ease-out; }
-        .btn-delete { opacity: 0.6; transition: opacity 0.2s; }
-        .registro-item:hover .btn-delete { opacity: 1; }
     </style>
 </head>
 <body id="main-body" class="bg-gray-100 min-h-screen font-sans" style="display: none;">
@@ -48,9 +46,10 @@
         
         <div class="flex flex-wrap border-b border-gray-300 mb-6 bg-white rounded-lg px-2 pt-2 shadow-sm overflow-x-auto">
             <button onclick="cambiarTab('qr')" id="tab-qr" class="tab-active flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Generar QR</button>
-            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Historial Simple</button>
-            <button onclick="cambiarTab('reporte')" id="tab-reporte" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap text-blue-700 font-bold">📊 Sábana de Asistencias</button>
-            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Administrar Clases</button>
+            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Historial</button>
+            <button onclick="cambiarTab('reporte')" id="tab-reporte" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap text-blue-700 font-bold">📊 Sábana</button>
+            <button onclick="cambiarTab('alumnos')" id="tab-alumnos" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap font-bold text-gray-700">👥 Mis Alumnos</button>
+            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Admin. Clases</button>
         </div>
 
         <div id="view-qr" class="view-section">
@@ -136,14 +135,74 @@
             </div>
         </div>
 
+        <div id="view-alumnos" class="view-section hidden">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">👥 Lista de Alumnos</h2>
+                        <p class="text-sm text-gray-500">Administra las inscripciones por materia.</p>
+                    </div>
+                    
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <select id="select-clase-alumnos" class="p-2 border-2 border-blue-100 rounded text-sm flex-grow md:min-w-[250px] focus:border-blue-500 outline-none">
+                            <option value="">-- Selecciona una Materia --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2">
+                        <div class="overflow-hidden border rounded-lg">
+                            <table class="w-full text-sm text-left text-gray-500">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3">Matrícula</th>
+                                        <th class="px-4 py-3">Nombre</th>
+                                        <th class="px-4 py-3 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-alumnos-inscritos">
+                                    <tr><td colspan="3" class="text-center py-8 text-gray-400">Selecciona una materia arriba para ver a los alumnos.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p id="contador-alumnos" class="text-xs text-gray-400 mt-2 text-right"></p>
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-lg h-fit border border-blue-100">
+                        <h3 class="font-bold text-blue-900 mb-3 text-sm">➕ Dar de Alta Alumno</h3>
+                        <p class="text-xs text-blue-800 mb-3">Agrega un alumno individualmente a esta materia.</p>
+                        <div class="space-y-3">
+                            <input type="text" id="alta-matricula" placeholder="Matrícula (Ej: A1234)" class="w-full p-2 border rounded text-sm uppercase">
+                            <input type="text" id="alta-nombre" placeholder="Nombre Completo" class="w-full p-2 border rounded text-sm uppercase">
+                            <button onclick="darAltaManual()" class="w-full bg-blue-600 text-white py-2 rounded font-bold text-sm hover:bg-blue-700 shadow">Agregar a la Lista</button>
+                        </div>
+                        <div id="alta-status" class="mt-2 text-xs font-bold text-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="view-clases" class="view-section hidden">
             
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-orange-500 mb-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-2">📥 Importador Masivo (Excel / Formato Matrícula-Nombre)</h2>
-                <textarea id="excel-data" rows="4" class="w-full p-3 border-2 border-dashed rounded-lg font-mono text-xs mb-3" placeholder="21203824-VALERIA YOLANDA&#10;A12345678	JUAN PEREZ"></textarea>
+                <h2 class="text-lg font-bold text-gray-800 mb-2">📥 Importador Masivo de Alumnos</h2>
+                <p class="text-xs text-gray-500 mb-3">1. Selecciona la asignatura. 2. Pega la lista (Excel o Texto).</p>
+                
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Asignatura Destino:</label>
+                    <select id="select-clase-importar" class="w-full p-2 border-2 border-orange-200 rounded bg-orange-50 text-sm font-bold text-gray-700 focus:border-orange-500 outline-none">
+                        <option value="">-- Selecciona dónde inscribir a los alumnos --</option>
+                    </select>
+                </div>
+
+                <textarea id="excel-data" rows="4" class="w-full p-3 border-2 border-dashed rounded-lg font-mono text-xs mb-3 focus:outline-none focus:border-orange-400" placeholder="21203824-VALERIA YOLANDA&#10;A12345678	JUAN PEREZ"></textarea>
+                
                 <div class="flex justify-between items-center">
-                    <span id="import-status" class="text-xs font-bold italic"></span>
-                    <button onclick="importarAlumnos()" class="bg-orange-600 text-white px-8 py-2 rounded font-bold">PROCESAR E IMPORTAR</button>
+                    <span id="import-status" class="text-xs font-bold italic text-gray-500">Esperando datos...</span>
+                    <button onclick="importarAlumnos()" class="bg-orange-600 text-white px-6 py-2 rounded font-bold hover:bg-orange-700 transition shadow">
+                        PROCESAR E INSCRIBIR
+                    </button>
                 </div>
             </div>
 
@@ -190,6 +249,7 @@
         let unsubscribeLive = null;
         let asistentesVivos = 0;
 
+        // Gestión de Pestañas
         window.cambiarTab = (tabName) => {
             if (claseActiva && tabName !== 'qr') {
                 if(!confirm("Cerrarás la sesión de asistencia actual. ¿Continuar?")) return;
@@ -203,6 +263,7 @@
             document.getElementById(`tab-${tabName}`).classList.replace('tab-inactive', 'tab-active');
         };
 
+        // Autenticación
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const docSnap = await getDoc(doc(db, "usuarios", user.uid));
@@ -211,43 +272,184 @@
                     document.getElementById('nav-email').innerText = user.email;
                     document.getElementById('loader').classList.add('hidden');
                     document.getElementById('main-body').style.display = "block";
-                    await cargarClases();
+                    await cargarClases(); // Carga las materias en todos los selects
                     qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
+                    
+                    // Listener para cambio de materia en la pestaña de alumnos
+                    document.getElementById('select-clase-alumnos').addEventListener('change', (e) => cargarAlumnosDeMateria(e.target.value));
+
                 } else { window.location.href = "index.html"; }
             } else { window.location.href = "login.html"; }
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => signOut(auth).then(() => window.location.href = "index.html"));
 
-        // Lógica de Importación Masiva
+        // ==========================================
+        // 1. IMPORTADOR Y GESTIÓN DE ALUMNOS
+        // ==========================================
+
         window.importarAlumnos = async () => {
             const rawData = document.getElementById('excel-data').value.trim();
+            const claseId = document.getElementById('select-clase-importar').value;
             const status = document.getElementById('import-status');
-            if (!rawData) return;
-            status.innerText = "⏳ Procesando...";
+
+            if (!claseId) return alert("⚠️ ¡ALERTA! Debes seleccionar una asignatura destino para inscribir a los alumnos.");
+            if (!rawData) return alert("Pega los datos de los alumnos.");
+
+            status.innerText = "⏳ Procesando e inscribiendo...";
             const filas = rawData.split('\n');
             let count = 0;
+            let errores = 0;
+
             for (let fila of filas) {
                 let m = "", n = "";
+                // Detección de formato
                 if (fila.includes('-')) {
                     const p = fila.split('-'); m = p[0].trim(); n = p.slice(1).join('-').trim();
                 } else if (fila.includes('\t')) {
                     const p = fila.split('\t'); m = p[0].trim(); n = p[1].trim();
                 }
+
                 if (m && n) {
-                    await setDoc(doc(db, "padron_alumnos", m.toUpperCase()), {
-                        nombre_oficial: n.toUpperCase(),
-                        matricula: m.toUpperCase(),
-                        fecha_importacion: serverTimestamp()
-                    });
-                    count++;
+                    try {
+                        const matricula = m.toUpperCase();
+                        const nombre = n.toUpperCase();
+
+                        // PASO 1: Agregar al Padrón Global (Lista blanca)
+                        await setDoc(doc(db, "padron_alumnos", matricula), {
+                            nombre_oficial: nombre,
+                            matricula: matricula,
+                            fecha_actualizacion: serverTimestamp()
+                        });
+
+                        // PASO 2: Inscribir en la Asignatura Específica (Nueva colección 'inscripciones')
+                        // Creamos un ID único compuesto: IDClase_Matricula
+                        const inscripcionId = `${claseId}_${matricula}`;
+                        await setDoc(doc(db, "inscripciones", inscripcionId), {
+                            clase_id: claseId,
+                            matricula: matricula,
+                            nombre_alumno: nombre,
+                            fecha_inscripcion: serverTimestamp()
+                        });
+
+                        count++;
+                    } catch (e) {
+                        console.error(e);
+                        errores++;
+                    }
                 }
             }
-            status.innerText = `✅ ${count} alumnos vinculados al padrón.`;
+            status.innerText = `✅ ${count} alumnos inscritos en la materia. (${errores} errores)`;
             document.getElementById('excel-data').value = "";
+            alert(`Proceso finalizado. ${count} alumnos se han vinculado a la asignatura.`);
         };
 
-        // Lógica de Justificación
+        // Función para cargar la tabla en la pestaña "Administrar Alumnos"
+        window.cargarAlumnosDeMateria = async (claseId) => {
+            const tbody = document.getElementById('lista-alumnos-inscritos');
+            const contador = document.getElementById('contador-alumnos');
+            
+            if (!claseId) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-400">Selecciona una materia.</td></tr>';
+                contador.innerText = "";
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-blue-500 font-bold">Cargando lista...</td></tr>';
+
+            try {
+                // Buscamos en la colección 'inscripciones'
+                const q = query(collection(db, "inscripciones"), where("clase_id", "==", claseId));
+                const snap = await getDocs(q);
+                
+                // Ordenamiento manual por nombre (para evitar requerir índice compuesto inmediatamente)
+                let alumnos = [];
+                snap.forEach(doc => {
+                    alumnos.push({ id: doc.id, ...doc.data() });
+                });
+                
+                alumnos.sort((a, b) => a.nombre_alumno.localeCompare(b.nombre_alumno));
+
+                if (alumnos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-400 italic">No hay alumnos inscritos en esta materia.</td></tr>';
+                    contador.innerText = "Total: 0 alumnos";
+                    return;
+                }
+
+                tbody.innerHTML = "";
+                alumnos.forEach(alum => {
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-gray-50 transition">
+                            <td class="px-4 py-3 font-mono text-xs font-bold text-gray-600">${alum.matricula}</td>
+                            <td class="px-4 py-3 font-bold text-gray-800">${alum.nombre_alumno}</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="darBajaAlumno('${alum.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
+                                    Dar de Baja
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                contador.innerText = `Total: ${alumnos.length} alumnos inscritos`;
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-red-500">Error al cargar: ${e.message}</td></tr>`;
+            }
+        };
+
+        // Función para Dar de Baja (Eliminar inscripción)
+        window.darBajaAlumno = async (inscripcionId) => {
+            if(confirm("¿Estás seguro de dar de baja a este alumno de esta materia?")) {
+                try {
+                    await deleteDoc(doc(db, "inscripciones", inscripcionId));
+                    // Recargar la lista
+                    const claseActual = document.getElementById('select-clase-alumnos').value;
+                    cargarAlumnosDeMateria(claseActual);
+                } catch (e) { alert("Error: " + e.message); }
+            }
+        };
+
+        // Función para Dar de Alta Manualmente (Individual)
+        window.darAltaManual = async () => {
+            const claseId = document.getElementById('select-clase-alumnos').value;
+            const mat = document.getElementById('alta-matricula').value.trim().toUpperCase();
+            const nom = document.getElementById('alta-nombre').value.trim().toUpperCase();
+            const status = document.getElementById('alta-status');
+
+            if (!claseId) return alert("Selecciona una materia primero.");
+            if (!mat || !nom) return alert("Escribe matrícula y nombre.");
+
+            status.innerText = "Guardando...";
+            try {
+                // 1. Padrón Global
+                await setDoc(doc(db, "padron_alumnos", mat), {
+                    nombre_oficial: nom,
+                    matricula: mat,
+                    fecha_actualizacion: serverTimestamp()
+                });
+                
+                // 2. Inscripción
+                const inscripcionId = `${claseId}_${mat}`;
+                await setDoc(doc(db, "inscripciones", inscripcionId), {
+                    clase_id: claseId,
+                    matricula: mat,
+                    nombre_alumno: nom,
+                    fecha_inscripcion: serverTimestamp()
+                });
+
+                status.innerText = "✅ Alumno agregado.";
+                document.getElementById('alta-matricula').value = "";
+                document.getElementById('alta-nombre').value = "";
+                cargarAlumnosDeMateria(claseId); // Recargar tabla
+                setTimeout(() => status.innerText = "", 3000);
+
+            } catch (e) { status.innerText = "❌ Error: " + e.message; }
+        };
+
+        // ==========================================
+        // 2. LÓGICA DE JUSTIFICACIÓN Y ASISTENCIA
+        // ==========================================
         window.guardarJustificacion = async () => {
             const mat = document.getElementById('just-matricula').value.toUpperCase().trim();
             const fecha = document.getElementById('just-fecha').value;
@@ -259,7 +461,6 @@
             status.innerText = "⏳ Aplicando...";
 
             try {
-                // Primero buscamos en el padrón para asegurar el nombre oficial
                 const pSnap = await getDoc(doc(db, "padron_alumnos", mat));
                 let nombre = "ALUMNO NO EN PADRÓN";
                 if(pSnap.exists()) nombre = pSnap.data().nombre_oficial;
@@ -276,7 +477,10 @@
             } catch (e) { status.innerText = "❌ Error: " + e.message; }
         };
 
-        // Gestión de QR y Monitor en Vivo
+        // ==========================================
+        // 3. CORE (QR, MATERIAS, MONITOR)
+        // ==========================================
+        
         document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
             const m = document.getElementById('select-clase-qr').value;
             if(!m) return;
@@ -335,19 +539,24 @@
 
         async function cargarClases() {
             const list = document.getElementById('lista-clases');
+            // Lista de todos los selects que necesitan llenarse con las materias
             const sels = [
                 document.getElementById('select-clase-qr'), 
                 document.getElementById('filtro-clase'), 
                 document.getElementById('select-clase-reporte'),
-                document.getElementById('select-clase-justificar')
+                document.getElementById('select-clase-justificar'),
+                document.getElementById('select-clase-importar'), // <--- Select del Importador
+                document.getElementById('select-clase-alumnos')   // <--- Select de la nueva pestaña
             ];
-            list.innerHTML = ""; sels.forEach(s => s.innerHTML = '<option value="">-- Materia --</option>');
+            list.innerHTML = ""; sels.forEach(s => s.innerHTML = '<option value="">-- Selecciona Materia --</option>');
+            
             const q = query(collection(db, "clases"), where("profesor_uid", "==", usuarioActual.uid));
             const snap = await getDocs(q);
+            
             snap.forEach(d => {
                 const data = d.data();
                 list.innerHTML += `<li class="flex justify-between bg-gray-50 p-3 rounded border"><span><b>${data.nombre}</b></span><button onclick="eliminarClase('${d.id}')" class="text-red-500 text-xs">Eliminar</button></li>`;
-                sels.forEach(s => s.add(new Option(data.nombre, data.nombre)));
+                sels.forEach(s => s.add(new Option(data.nombre, data.nombre))); // Usamos el nombre como ID para simplicidad
             });
         }
 
@@ -360,6 +569,8 @@
             cargarClases();
             e.target.reset();
         });
+
+        window.eliminarClase = async (id) => { if(confirm("¿Eliminar materia?")) { await deleteDoc(doc(db, "clases", id)); cargarClases(); } };
 
         // Sábana de Asistencias (Matriz)
         window.generarMatrizAsistencia = async () => {
@@ -388,6 +599,45 @@
                 }).join('')}</tr>`;
             }).join('');
         };
+
+        // Historial simple
+        window.consultarAsistencias = async () => {
+            const filtroClase = document.getElementById('filtro-clase').value;
+            const filtroFecha = document.getElementById('filtro-fecha').value;
+            const tbody = document.getElementById('tabla-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-blue-500">Buscando...</td></tr>';
+            try {
+                let q = query(collection(db, "asistencias"), orderBy("timestamp", "desc"));
+                if (filtroClase) q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+                tbody.innerHTML = ""; let count=0;
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    const fechaObj = data.timestamp.toDate();
+                    let fechaFiltro = fechaObj.toISOString().split('T')[0];
+                    if (!filtroFecha || filtroFecha === fechaFiltro) {
+                        count++;
+                        const badge = data.tipo === "justificado" ? 
+                            '<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-bold">Justificado</span>' : 
+                            '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span>';
+                        tbody.innerHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-4 py-2">${fechaObj.toLocaleDateString()}</td><td class="px-4 py-2 font-mono text-xs">${fechaObj.toLocaleTimeString()}</td><td class="px-4 py-2 font-bold text-gray-700">${data.alumno.nombre}</td><td class="px-4 py-2">${data.alumno.matricula}</td><td class="px-4 py-2">${badge}</td></tr>`;
+                    }
+                });
+                if(count===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay datos.</td></tr>';
+            } catch (e) { tbody.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error: ${e.message}</td></tr>`; }
+        };
+
+        window.exportarCSV = () => {
+            const rows = document.querySelectorAll('#tabla-body tr');
+            if (rows.length === 0 || rows[0].innerText.includes('No hay datos')) return alert("Sin datos.");
+            let csvContent = "\uFEFFFecha,Hora,Alumno,Matricula,Estado\n";
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if(cols.length > 1) { csvContent += Array.from(cols).map(col => `"${col.innerText}"`).join(",") + "\n"; }
+            });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+        };
+
     </script>
 </body>
 </html>

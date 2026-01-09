@@ -18,28 +18,30 @@
 
         <form id="registro-form" class="space-y-4">
             
-            <div>
+            <div id="campo-nombre" class="hidden">
                 <label class="block text-sm font-medium text-gray-700">Nombre Completo</label>
-                <input type="text" id="nombre" required class="w-full p-2 border rounded bg-gray-50 uppercase" placeholder="JUAN PÉREZ">
+                <input type="text" id="nombre" class="w-full p-2 border rounded bg-gray-50 uppercase" placeholder="JUAN PÉREZ">
             </div>
+
+            <div id="campo-matricula">
+                <label class="block text-sm font-medium text-gray-700">Matrícula</label>
+                <input type="text" id="matricula" required class="w-full p-2 border rounded bg-gray-50 uppercase" placeholder="A12345678">
+                <p class="text-[10px] text-gray-400 mt-1">Tu nombre se vinculará automáticamente con tu matrícula oficial.</p>
+            </div>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700">Correo Institucional</label>
-                <input type="email" id="email" required class="w-full p-2 border rounded bg-gray-50" placeholder="A12345678@alumnos.uady.mx">
+                <input type="email" id="email" required class="w-full p-2 border rounded bg-gray-50" placeholder="usuario@correo.uady.mx">
             </div>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700">Contraseña (Mín. 6 caracteres)</label>
                 <input type="password" id="password" required class="w-full p-2 border rounded bg-gray-50" placeholder="******">
             </div>
 
-            <div id="campo-matricula">
-                <label class="block text-sm font-medium text-gray-700">Matrícula</label>
-                <input type="text" id="matricula" class="w-full p-2 border rounded bg-gray-50 uppercase" placeholder="A12345678">
-            </div>
-
             <div id="campo-secreto" class="hidden bg-yellow-50 p-3 rounded border border-yellow-200">
                 <label class="block text-sm font-bold text-yellow-800">🔒 Clave de Autenticación Docente</label>
                 <input type="password" id="clave-profe" class="w-full p-2 border rounded mt-1" placeholder="Solo personal autorizado">
-                <p class="text-xs text-gray-500 mt-1">Ingresa la clave proporcionada por la Facultad</p>
             </div>
 
             <div id="error-msg" class="text-red-500 text-sm text-center hidden font-bold"></div>
@@ -57,115 +59,116 @@
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Variables de estado
         let esProfesor = false;
-        // --- AQUÍ ESTÁ EL CAMBIO DE CLAVE ---
         const CLAVE_MAESTRA = "Profe-UADY-asist26"; 
 
-        // Elementos DOM
         const tabAlumno = document.getElementById('tab-alumno');
         const tabProfesor = document.getElementById('tab-profesor');
+        const campoNombre = document.getElementById('campo-nombre');
         const campoMatricula = document.getElementById('campo-matricula');
         const campoSecreto = document.getElementById('campo-secreto');
         const btnSubmit = document.getElementById('btn-submit');
-        const emailInput = document.getElementById('email'); 
-        const form = document.getElementById('registro-form');
         const errorMsg = document.getElementById('error-msg');
+        const form = document.getElementById('registro-form');
 
         // Lógica de Pestañas
-        tabAlumno.addEventListener('click', (e) => {
-            e.preventDefault();
-            activarModo(false);
-        });
-
-        tabProfesor.addEventListener('click', (e) => {
-            e.preventDefault();
-            activarModo(true);
-        });
+        tabAlumno.addEventListener('click', (e) => { e.preventDefault(); activarModo(false); });
+        tabProfesor.addEventListener('click', (e) => { e.preventDefault(); activarModo(true); });
 
         function activarModo(modoProfe) {
             esProfesor = modoProfe;
+            errorMsg.classList.add('hidden');
+            
             if (esProfesor) {
-                // Estilos Pestaña
-                tabProfesor.classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'font-bold');
-                tabProfesor.classList.remove('text-gray-500');
-                tabAlumno.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600', 'font-bold');
-                tabAlumno.classList.add('text-gray-500');
-                
-                // Campos y Textos
+                tabProfesor.className = "flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none transition";
+                tabAlumno.className = "flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none transition";
+                campoNombre.classList.remove('hidden');
                 campoMatricula.classList.add('hidden');
                 campoSecreto.classList.remove('hidden');
                 btnSubmit.innerText = "Registrarme como Profesor";
-                btnSubmit.classList.replace('bg-blue-600', 'bg-orange-600');
-                btnSubmit.classList.replace('hover:bg-blue-700', 'hover:bg-orange-700');
-                
-                emailInput.placeholder = "profesor@correo.uady.mx";
-                
+                btnSubmit.className = "w-full bg-orange-600 text-white py-3 rounded font-bold hover:bg-orange-700 transition shadow-lg";
             } else {
-                // Estilos Pestaña
-                tabAlumno.classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'font-bold');
-                tabAlumno.classList.remove('text-gray-500');
-                tabProfesor.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600', 'font-bold');
-                tabProfesor.classList.add('text-gray-500');
-
-                // Campos y Textos
+                tabAlumno.className = "flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none transition";
+                tabProfesor.className = "flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none transition";
+                campoNombre.classList.add('hidden');
                 campoMatricula.classList.remove('hidden');
                 campoSecreto.classList.add('hidden');
                 btnSubmit.innerText = "Registrarme como Alumno";
-                btnSubmit.classList.replace('bg-orange-600', 'bg-blue-600');
-                btnSubmit.classList.replace('hover:bg-orange-700', 'hover:bg-blue-700');
-                
-                emailInput.placeholder = "A12345678@alumnos.uady.mx";
+                btnSubmit.className = "w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg";
             }
         }
 
-        // Manejo del Envío
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMsg.classList.add('hidden');
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const nombre = document.getElementById('nombre').value.toUpperCase().trim();
-            const matricula = document.getElementById('matricula').value.toUpperCase().trim();
+            let matricula = document.getElementById('matricula').value.toUpperCase().trim();
+            const nombreIngresado = document.getElementById('nombre').value.toUpperCase().trim();
             const claveIngresada = document.getElementById('clave-profe').value;
 
-            // Validaciones
-            if (password.length < 6) return mostrarError("La contraseña debe tener al menos 6 caracteres.");
-            
-            if (esProfesor) {
-                if (claveIngresada !== CLAVE_MAESTRA) return mostrarError("Clave docente incorrecta. No tienes autorización.");
-            } else {
-                if (matricula.length < 4) return mostrarError("Escribe una matrícula válida.");
+            // 1. Normalizar Matrícula (Agregar 'A' si no la tiene)
+            if (!esProfesor && matricula !== "") {
+                if (!matricula.startsWith('A')) {
+                    matricula = 'A' + matricula;
+                }
             }
 
             try {
                 btnSubmit.disabled = true;
-                btnSubmit.innerText = "Creando cuenta...";
+                btnSubmit.innerText = "Verificando...";
 
+                let nombreFinal = nombreIngresado;
+
+                // --- VALIDACIÓN DE PADRÓN PARA ALUMNOS ---
+                if (!esProfesor) {
+                    const padronRef = doc(db, "padron_alumnos", matricula);
+                    const padronSnap = await getDoc(padronRef);
+
+                    if (!padronSnap.exists()) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerText = "Registrarme como Alumno";
+                        return mostrarError("🚫 Matrícula no autorizada. No te encuentras en el padrón oficial.");
+                    }
+                    // Recuperar el nombre oficial del padrón
+                    nombreFinal = padronSnap.data().nombre_oficial;
+                } else {
+                    // Validación de Profesor
+                    if (claveIngresada !== CLAVE_MAESTRA) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerText = "Registrarme como Profesor";
+                        return mostrarError("Clave docente incorrecta.");
+                    }
+                    if (!nombreFinal) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerText = "Registrarme como Profesor";
+                        return mostrarError("Por favor, ingresa tu nombre.");
+                    }
+                }
+
+                // --- CREACIÓN DE CUENTA ---
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
+                // Guardar en colección de usuarios
                 await setDoc(doc(db, "usuarios", user.uid), {
                     email: email,
-                    nombre: nombre,
+                    nombre: nombreFinal,
                     rol: esProfesor ? "profesor" : "alumno",
                     matricula: esProfesor ? "N/A" : matricula,
                     fecha_registro: new Date()
                 });
 
-                alert("¡Cuenta creada con éxito!");
-                
-                if (esProfesor) window.location.href = "generador.html";
-                else window.location.href = "escaner.html";
+                alert("¡Bienvenido, " + nombreFinal + "! Cuenta creada con éxito.");
+                window.location.href = esProfesor ? "generador.html" : "escaner.html";
 
             } catch (error) {
                 console.error(error);
-                let msg = "Error al crear cuenta: " + error.code;
-                if (error.code === 'auth/email-already-in-use') msg = "Ese correo ya está registrado. Intenta iniciar sesión.";
-                if (error.code === 'auth/invalid-email') msg = "El correo no tiene un formato válido.";
+                let msg = "Error: " + error.code;
+                if (error.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
                 mostrarError(msg);
                 btnSubmit.disabled = false;
                 btnSubmit.innerText = esProfesor ? "Registrarme como Profesor" : "Registrarme como Alumno";
@@ -173,7 +176,7 @@
         });
 
         function mostrarError(msg) {
-            errorMsg.innerText = msg;
+            errorMsg.innerHTML = msg;
             errorMsg.classList.remove('hidden');
         }
     </script>

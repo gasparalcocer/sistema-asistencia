@@ -47,86 +47,48 @@
     <main class="max-w-7xl mx-auto p-4">
         
         <div class="flex flex-wrap border-b border-gray-300 mb-6 bg-white rounded-lg px-2 pt-2 shadow-sm overflow-x-auto">
-            <button onclick="cambiarTab('qr')" id="tab-qr" class="tab-active flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
-                Generar QR
-            </button>
-            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
-                Historial Simple
-            </button>
-            <button onclick="cambiarTab('reporte')" id="tab-reporte" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap text-blue-700 font-bold">
-                📊 Sábana de Asistencias
-            </button>
-            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">
-                Administrar Clases
-            </button>
+            <button onclick="cambiarTab('qr')" id="tab-qr" class="tab-active flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Generar QR</button>
+            <button onclick="cambiarTab('historial')" id="tab-historial" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Historial Simple</button>
+            <button onclick="cambiarTab('reporte')" id="tab-reporte" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap text-blue-700 font-bold">📊 Sábana de Asistencias</button>
+            <button onclick="cambiarTab('clases')" id="tab-clases" class="tab-inactive flex-1 py-3 px-4 focus:outline-none transition whitespace-nowrap">Administrar Clases</button>
         </div>
 
         <div id="view-qr" class="view-section">
             <div class="bg-white p-6 rounded-lg shadow max-w-4xl mx-auto border-t-4 border-blue-900">
                 <div id="config-qr-container" class="text-center py-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">Pasar Lista</h2>
-                    <p class="text-gray-500 mb-6 text-sm">Selecciona una materia para abrir la sesión.</p>
                     <div class="max-w-md mx-auto">
-                        <label class="block text-left text-sm font-bold text-gray-700 mb-1">Materia</label>
-                        <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4 focus:ring-2 focus:ring-blue-500">
-                            <option value="">-- Cargar materias... --</option>
-                        </select>
-                        <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg text-lg">
-                            INICIAR CLASE
-                        </button>
+                        <select id="select-clase-qr" class="w-full p-3 border rounded bg-gray-50 mb-4"></select>
+                        <button id="btn-iniciar-qr" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg text-lg">INICIAR CLASE</button>
                     </div>
                 </div>
 
                 <div id="panel-qr-activo" class="hidden">
                     <div class="flex justify-between items-center mb-4 border-b pb-2">
-                        <div>
-                            <span class="text-xs text-gray-400 font-bold uppercase">Clase en curso</span>
-                            <h3 id="titulo-clase-activa" class="text-2xl font-bold text-blue-900 leading-none"></h3>
-                        </div>
-                        <button onclick="detenerClase()" class="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold text-sm transition">
-                            ⏹ Terminar
-                        </button>
+                        <h3 id="titulo-clase-activa" class="text-2xl font-bold text-blue-900"></h3>
+                        <button onclick="detenerClase()" class="bg-red-100 text-red-700 px-4 py-2 rounded font-bold text-sm">⏹ Terminar</button>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="flex flex-col items-center border-r-0 md:border-r border-gray-200 p-4">
-                            <div class="bg-white p-2 inline-block rounded shadow-lg border mb-4">
-                                <canvas id="qrcode"></canvas>
-                            </div>
-                            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-6">
-                                Cambia en: <span id="contador" class="font-bold text-blue-600 w-6 inline-block text-center">10</span>s
-                            </div>
-
-                            <div class="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-sm">
-                                <h4 class="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                                    <span>✍️</span> Registro Rápido
-                                </h4>
-                                <p class="text-xs text-yellow-600 mb-3">Escribe la matrícula, el sistema buscará el nombre.</p>
-                                <div class="space-y-2">
-                                    <div class="flex gap-2">
-                                        <input type="text" id="manual-matricula" placeholder="Matrícula (Ej: A1234)" class="w-full p-2 text-sm border rounded uppercase focus:ring-2 focus:ring-yellow-500">
-                                        <button onclick="registrarManual()" class="bg-yellow-600 text-white px-4 py-2 rounded font-bold hover:bg-yellow-700 transition shadow">
-                                            OK
-                                        </button>
-                                    </div>
-                                    <p id="manual-status" class="text-xs text-center text-gray-400 italic h-4"></p>
+                        <div class="flex flex-col items-center p-4">
+                            <canvas id="qrcode" class="bg-white p-2 rounded shadow-lg border mb-4"></canvas>
+                            <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-6">Cambia en: <span id="contador" class="font-bold text-blue-600">10</span>s</div>
+                            <div class="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <h4 class="text-sm font-bold text-yellow-800 mb-2">✍️ Registro Rápido</h4>
+                                <div class="flex gap-2">
+                                    <input type="text" id="manual-matricula" placeholder="Matrícula" class="w-full p-2 text-sm border rounded uppercase">
+                                    <button onclick="registrarManual()" class="bg-yellow-600 text-white px-4 py-2 rounded font-bold">OK</button>
                                 </div>
+                                <p id="manual-status" class="text-xs mt-1 text-gray-400 italic h-4"></p>
                             </div>
                         </div>
-
                         <div class="flex flex-col h-[500px]">
                             <div class="flex justify-between items-end mb-2">
                                 <h4 class="font-bold text-gray-700">Asistentes en Sala</h4>
                                 <span id="contador-vivo" class="bg-green-100 text-green-800 text-2xl font-bold px-3 py-1 rounded-lg">0</span>
                             </div>
-                            <div class="flex-1 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden flex flex-col">
-                                <div class="bg-gray-200 px-4 py-2 text-xs font-bold text-gray-500 flex justify-between">
-                                    <span>ALUMNO</span><span>HORA</span>
-                                </div>
-                                <ul id="lista-asistentes-vivo" class="overflow-y-auto p-2 space-y-2 flex-1">
-                                    <li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">Esperando registros...</li>
-                                </ul>
-                            </div>
+                            <ul id="lista-asistentes-vivo" class="overflow-y-auto p-2 space-y-2 border rounded bg-gray-50 flex-1">
+                                <li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">Esperando registros...</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -137,37 +99,19 @@
             <div class="bg-white p-6 rounded-lg shadow">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold text-gray-800">Bitácora Diaria</h2>
-                    <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold text-sm flex items-center gap-2 shadow transition">
-                        <span>📥</span> Descargar Excel (CSV)
-                    </button>
+                    <button onclick="exportarCSV()" class="bg-green-600 text-white px-4 py-2 rounded font-bold text-sm">📥 Descargar CSV</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div>
-                        <label class="text-xs font-bold text-gray-500">Materia</label>
-                        <select id="filtro-clase" class="w-full p-2 border rounded text-sm"></select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-gray-500">Fecha</label>
-                        <input type="date" id="filtro-fecha" class="w-full p-2 border rounded text-sm">
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="consultarAsistencias()" class="w-full bg-blue-900 text-white py-2 rounded text-sm font-bold hover:bg-blue-800">Buscar</button>
-                    </div>
+                    <select id="filtro-clase" class="p-2 border rounded text-sm"></select>
+                    <input type="date" id="filtro-fecha" class="p-2 border rounded text-sm">
+                    <button onclick="consultarAsistencias()" class="bg-blue-900 text-white py-2 rounded text-sm font-bold">Buscar</button>
                 </div>
                 <div class="overflow-x-auto border rounded">
-                    <table class="w-full text-sm text-left text-gray-500" id="tabla-exportable">
+                    <table class="w-full text-sm text-left text-gray-500">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th class="px-6 py-3">Fecha</th>
-                                <th class="px-6 py-3">Hora</th>
-                                <th class="px-6 py-3">Alumno</th>
-                                <th class="px-6 py-3">Matrícula</th>
-                                <th class="px-6 py-3">Estado</th>
-                            </tr>
+                            <tr><th>Fecha</th><th>Hora</th><th>Alumno</th><th>Matrícula</th><th>Estado</th></tr>
                         </thead>
-                        <tbody id="tabla-body">
-                            <tr><td colspan="5" class="text-center py-4">Selecciona filtros...</td></tr>
-                        </tbody>
+                        <tbody id="tabla-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -175,17 +119,17 @@
 
         <div id="view-reporte" class="view-section hidden">
             <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4">
-                    <div><h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2><p class="text-sm text-gray-500">Vista tipo Excel por fechas</p></div>
-                    <div class="mt-4 md:mt-0 flex gap-2">
-                        <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]"><option value="">-- Selecciona Materia --</option></select>
-                        <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 shadow">Generar</button>
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <h2 class="text-xl font-bold text-blue-900">📊 Reporte Global</h2>
+                    <div class="flex gap-2">
+                        <select id="select-clase-reporte" class="p-2 border rounded text-sm min-w-[200px]"></select>
+                        <button onclick="generarMatrizAsistencia()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">Generar</button>
                     </div>
                 </div>
-                <div class="overflow-x-auto bg-white border rounded-lg max-h-[500px]">
+                <div class="overflow-x-auto max-h-[500px] border rounded">
                     <table class="w-full table-matrix border-collapse relative">
-                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs sticky top-0 z-20 shadow-sm" id="matriz-head"><tr><th class="p-4">Selecciona una materia arriba</th></tr></thead>
-                        <tbody class="text-gray-600" id="matriz-body"></tbody>
+                        <thead id="matriz-head" class="bg-gray-100 sticky top-0 z-20 shadow-sm"></thead>
+                        <tbody id="matriz-body"></tbody>
                     </table>
                 </div>
                 <p id="msg-reporte" class="text-center text-sm text-gray-400 mt-4"></p>
@@ -193,50 +137,42 @@
         </div>
 
         <div id="view-clases" class="view-section hidden">
+            
+            <div class="bg-white p-6 rounded-lg shadow border-t-4 border-orange-500 mb-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-2">📥 Importador Masivo (Excel / Formato Matrícula-Nombre)</h2>
+                <textarea id="excel-data" rows="4" class="w-full p-3 border-2 border-dashed rounded-lg font-mono text-xs mb-3" placeholder="21203824-VALERIA YOLANDA&#10;A12345678	JUAN PEREZ"></textarea>
+                <div class="flex justify-between items-center">
+                    <span id="import-status" class="text-xs font-bold italic"></span>
+                    <button onclick="importarAlumnos()" class="bg-orange-600 text-white px-8 py-2 rounded font-bold">PROCESAR E IMPORTAR</button>
+                </div>
+            </div>
+
             <div class="bg-white p-6 rounded-lg shadow border-t-4 border-blue-500 mb-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>⚖️</span> Justificar Falta (Retroactivo)
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Matrícula</label>
-                        <input type="text" id="just-matricula" placeholder="A12345678" class="w-full p-2 border rounded text-sm uppercase">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Fecha de la Falta</label>
-                        <input type="date" id="just-fecha" class="w-full p-2 border rounded text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Materia</label>
-                        <select id="select-clase-justificar" class="w-full p-2 border rounded text-sm">
-                            <option value="">-- Selecciona Materia --</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Observaciones</label>
-                        <input type="text" id="just-nota" placeholder="Ej: Motivos de salud" class="w-full p-2 border rounded text-sm">
-                    </div>
+                <h2 class="text-lg font-bold text-gray-800 mb-4">⚖️ Justificar Falta (Retroactivo)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <input type="text" id="just-matricula" placeholder="Matrícula" class="p-2 border rounded text-sm uppercase">
+                    <input type="date" id="just-fecha" class="p-2 border rounded text-sm">
+                    <select id="select-clase-justificar" class="p-2 border rounded text-sm"></select>
+                    <input type="text" id="just-nota" placeholder="Observaciones" class="p-2 border rounded text-sm">
                 </div>
                 <div class="mt-4 flex justify-end">
-                    <button onclick="guardarJustificacion()" class="bg-blue-800 text-white px-6 py-2 rounded font-bold hover:bg-blue-900 transition text-sm shadow-md">
-                        Aplicar Justificación
-                    </button>
+                    <button onclick="guardarJustificacion()" class="bg-blue-800 text-white px-6 py-2 rounded font-bold text-sm shadow-md">Aplicar Justificación</button>
                 </div>
                 <p id="just-status" class="text-xs mt-2 italic text-gray-400"></p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow h-fit border-t-4 border-green-600">
+                <div class="bg-white p-6 rounded-lg shadow border-t-4 border-green-600">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">➕ Nueva Materia</h2>
-                    <form id="form-add-clase">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Nombre</label><input type="text" id="nueva-clase-nombre" required class="w-full p-2 border rounded mb-3">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Código</label><input type="text" id="nueva-clase-id" class="w-full p-2 border rounded mb-4">
-                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Guardar</button>
+                    <form id="form-add-clase" class="space-y-3">
+                        <input type="text" id="nueva-clase-nombre" placeholder="Nombre de la Materia" required class="w-full p-2 border rounded">
+                        <input type="text" id="nueva-clase-id" placeholder="Código" class="w-full p-2 border rounded">
+                        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded font-bold">Guardar</button>
                     </form>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">📚 Mis Materias</h2>
-                    <ul id="lista-clases" class="space-y-2"><li class="text-gray-400 text-sm italic">Cargando...</li></ul>
+                    <ul id="lista-clases" class="space-y-2"></ul>
                 </div>
             </div>
         </div>
@@ -245,7 +181,7 @@
     <script type="module">
         import { auth, db, collection, addDoc, serverTimestamp } from './firebase-config.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, getDocs, query, where, orderBy, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, getDocs, setDoc, query, where, orderBy, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let usuarioActual = null;
         let intervaloQR;
@@ -256,278 +192,201 @@
 
         window.cambiarTab = (tabName) => {
             if (claseActiva && tabName !== 'qr') {
-                if(confirm("Salir detendrá la sesión actual. ¿Continuar?")) detenerClase(); else return;
+                if(!confirm("Cerrarás la sesión de asistencia actual. ¿Continuar?")) return;
+                detenerClase();
             }
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            document.querySelectorAll('button[id^="tab-"]').forEach(btn => { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); });
-            const activeBtn = document.getElementById(`tab-${tabName}`);
-            activeBtn.classList.add('tab-active'); activeBtn.classList.remove('tab-inactive');
+            document.querySelectorAll('button[id^="tab-"]').forEach(btn => { 
+                btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); 
+            });
+            document.getElementById(`tab-${tabName}`).classList.replace('tab-inactive', 'tab-active');
         };
 
         onAuthStateChanged(auth, async (user) => {
-            const loader = document.getElementById('loader');
-            const mainBody = document.getElementById('main-body');
             if (user) {
-                try {
-                    const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-                    if (docSnap.exists() && docSnap.data().rol === "profesor") {
-                        usuarioActual = user;
-                        document.getElementById('nav-email').innerText = user.email;
-                        loader.classList.add('hidden');
-                        mainBody.style.display = "block";
-                        await cargarClases();
-                        qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
-                    } else { alert("Acceso denegado."); window.location.href = "index.html"; }
-                } catch (e) { console.error(e); }
-            } else { window.location.href = "index.html"; }
+                const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+                if (docSnap.exists() && docSnap.data().rol === "profesor") {
+                    usuarioActual = user;
+                    document.getElementById('nav-email').innerText = user.email;
+                    document.getElementById('loader').classList.add('hidden');
+                    document.getElementById('main-body').style.display = "block";
+                    await cargarClases();
+                    qrGenerator = new QRious({ element: document.getElementById('qrcode'), size: 250 });
+                } else { window.location.href = "index.html"; }
+            } else { window.location.href = "login.html"; }
         });
 
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            signOut(auth).then(() => window.location.href = "index.html");
-        });
+        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth).then(() => window.location.href = "index.html"));
 
-        document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
-            const nombreClase = document.getElementById('select-clase-qr').value;
-            if(!nombreClase) return alert("Selecciona una materia");
-            claseActiva = nombreClase;
-            document.getElementById('titulo-clase-activa').innerText = nombreClase;
-            document.getElementById('config-qr-container').classList.add('hidden');
-            document.getElementById('panel-qr-activo').classList.remove('hidden');
-            generarQR();
-            intervaloQR = setInterval(() => {
-                let s = parseInt(document.getElementById('contador').innerText); s--;
-                document.getElementById('contador').innerText = s;
-                if(s <= 0) { generarQR(); document.getElementById('contador').innerText = 10; }
-            }, 1000);
-            iniciarMonitorEnVivo(nombreClase);
-        });
-
-        window.detenerClase = () => {
-            clearInterval(intervaloQR);
-            if (unsubscribeLive) { unsubscribeLive(); unsubscribeLive = null; }
-            document.getElementById('panel-qr-activo').classList.add('hidden');
-            document.getElementById('config-qr-container').classList.remove('hidden');
-            claseActiva = null;
-            document.getElementById('lista-asistentes-vivo').innerHTML = '<li class="text-center text-gray-400 text-sm py-10 italic" id="msg-esperando">Esperando registros...</li>';
-            asistentesVivos = 0;
-            document.getElementById('contador-vivo').innerText = "0";
-            document.getElementById('manual-matricula').value = "";
-            document.getElementById('manual-status').innerText = "";
-        };
-
-        window.registrarManual = async () => {
-            const mat = document.getElementById('manual-matricula').value.toUpperCase().trim();
-            const statusEl = document.getElementById('manual-status');
-            if(!mat) return;
-            statusEl.innerText = "Buscando alumno...";
-            try {
-                const q = query(collection(db, "usuarios"), where("matricula", "==", mat));
-                const querySnapshot = await getDocs(q);
-                let nombreFinal = "ALUMNO EXTERNO"; 
-                if (!querySnapshot.empty) { nombreFinal = querySnapshot.docs[0].data().nombre; }
-                await addDoc(collection(db, "asistencias"), {
-                    id_sesion: claseActiva,
-                    qr_token: new Date().getTime(),
-                    alumno: { nombre: nombreFinal, matricula: mat },
-                    ubicacion: { lat: 0, lng: 0, manual: true },
-                    timestamp: serverTimestamp(),
-                    dispositivo: "Registro Manual Docente"
-                });
-                document.getElementById('manual-matricula').value = "";
-                statusEl.innerText = `✓ Registrado: ${nombreFinal}`;
-                setTimeout(() => statusEl.innerText = "", 3000);
-            } catch (e) {
-                statusEl.innerText = "Error: " + e.message;
+        // Lógica de Importación Masiva
+        window.importarAlumnos = async () => {
+            const rawData = document.getElementById('excel-data').value.trim();
+            const status = document.getElementById('import-status');
+            if (!rawData) return;
+            status.innerText = "⏳ Procesando...";
+            const filas = rawData.split('\n');
+            let count = 0;
+            for (let fila of filas) {
+                let m = "", n = "";
+                if (fila.includes('-')) {
+                    const p = fila.split('-'); m = p[0].trim(); n = p.slice(1).join('-').trim();
+                } else if (fila.includes('\t')) {
+                    const p = fila.split('\t'); m = p[0].trim(); n = p[1].trim();
+                }
+                if (m && n) {
+                    await setDoc(doc(db, "padron_alumnos", m.toUpperCase()), {
+                        nombre_oficial: n.toUpperCase(),
+                        matricula: m.toUpperCase(),
+                        fecha_importacion: serverTimestamp()
+                    });
+                    count++;
+                }
             }
+            status.innerText = `✅ ${count} alumnos vinculados al padrón.`;
+            document.getElementById('excel-data').value = "";
         };
 
+        // Lógica de Justificación
         window.guardarJustificacion = async () => {
             const mat = document.getElementById('just-matricula').value.toUpperCase().trim();
-            const fechaInput = document.getElementById('just-fecha').value;
+            const fecha = document.getElementById('just-fecha').value;
             const materia = document.getElementById('select-clase-justificar').value;
             const nota = document.getElementById('just-nota').value.trim();
             const status = document.getElementById('just-status');
 
-            if(!mat || !fechaInput || !materia) return alert("Por favor, completa los campos obligatorios.");
+            if(!mat || !fecha || !materia) return alert("Completa los campos obligatorios");
+            status.innerText = "⏳ Aplicando...";
 
-            status.innerText = "Procesando justificación...";
             try {
-                const qUser = query(collection(db, "usuarios"), where("matricula", "==", mat));
-                const userSnap = await getDocs(qUser);
-                if(userSnap.empty) { status.innerText = "❌ Error: Matrícula no encontrada."; return; }
-
-                const nombreAlumno = userSnap.docs[0].data().nombre;
-                const fechaJustificada = new Date(fechaInput + "T12:00:00");
+                // Primero buscamos en el padrón para asegurar el nombre oficial
+                const pSnap = await getDoc(doc(db, "padron_alumnos", mat));
+                let nombre = "ALUMNO NO EN PADRÓN";
+                if(pSnap.exists()) nombre = pSnap.data().nombre_oficial;
 
                 await addDoc(collection(db, "asistencias"), {
                     id_sesion: materia,
-                    alumno: { nombre: nombreAlumno, matricula: mat },
-                    timestamp: fechaJustificada,
+                    alumno: { nombre: nombre, matricula: mat },
+                    timestamp: new Date(fecha + "T12:00:00"),
                     tipo: "justificado",
-                    ubicacion: { manual: true, nota: nota || "Justificado por Docente" },
-                    dispositivo: "Panel Administrativo"
+                    ubicacion: { manual: true, nota: nota || "Justificación docente" }
                 });
-
-                status.innerText = `✅ Éxito: Falta justificada para ${nombreAlumno}`;
+                status.innerText = "✅ Justificación aplicada.";
                 document.getElementById('just-matricula').value = "";
-                document.getElementById('just-nota').value = "";
-                if(!document.getElementById('view-reporte').classList.contains('hidden')) generarMatrizAsistencia();
             } catch (e) { status.innerText = "❌ Error: " + e.message; }
         };
 
-        window.eliminarRegistroVivo = async (idAsistencia) => {
-            if(confirm("¿Eliminar este registro?")) {
-                try { await deleteDoc(doc(db, "asistencias", idAsistencia)); } catch (e) { alert("Error: " + e.message); }
-            }
-        };
+        // Gestión de QR y Monitor en Vivo
+        document.getElementById('btn-iniciar-qr').addEventListener('click', () => {
+            const m = document.getElementById('select-clase-qr').value;
+            if(!m) return;
+            claseActiva = m;
+            document.getElementById('titulo-clase-activa').innerText = m;
+            document.getElementById('config-qr-container').classList.add('hidden');
+            document.getElementById('panel-qr-activo').classList.remove('hidden');
+            generarQR();
+            intervaloQR = setInterval(() => {
+                let s = parseInt(document.getElementById('contador').innerText) - 1;
+                document.getElementById('contador').innerText = s <= 0 ? (generarQR(), 10) : s;
+            }, 1000);
+            iniciarMonitorEnVivo(m);
+        });
 
-        function iniciarMonitorEnVivo(materia) {
-            const listaEl = document.getElementById('lista-asistentes-vivo');
-            const contadorEl = document.getElementById('contador-vivo');
-            const horaInicio = new Date();
-            const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia), where("timestamp", ">=", horaInicio), orderBy("timestamp", "desc"));
-            unsubscribeLive = onSnapshot(q, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    const data = change.doc.data();
-                    const docId = change.doc.id;
-                    if (change.type === "added") {
-                        const msgEsperando = document.getElementById('msg-esperando');
-                        if(msgEsperando) msgEsperando.remove();
+        function iniciarMonitorEnVivo(m) {
+            const lista = document.getElementById('lista-asistentes-vivo');
+            const cont = document.getElementById('contador-vivo');
+            const q = query(collection(db, "asistencias"), where("id_sesion", "==", m), where("timestamp", ">=", new Date()), orderBy("timestamp", "desc"));
+            unsubscribeLive = onSnapshot(q, (snap) => {
+                snap.docChanges().forEach(c => {
+                    if (c.type === "added") {
+                        const d = c.doc.data();
+                        document.getElementById('msg-esperando')?.remove();
                         asistentesVivos++;
-                        contadorEl.innerText = asistentesVivos;
-                        const hora = data.timestamp ? data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : "Reciente";
-                        const esManual = data.ubicacion && data.ubicacion.manual;
-                        const icon = esManual ? "✍️" : "📱";
-                        const estilo = esManual ? "border-yellow-400 bg-yellow-50" : "border-green-500 bg-white";
+                        cont.innerText = asistentesVivos;
                         const li = document.createElement('li');
-                        li.id = `asistencia-${docId}`;
-                        li.className = `registro-item flex justify-between items-center p-3 rounded shadow-sm border-l-4 nuevo-registro ${estilo} group`;
-                        li.innerHTML = `<div class="flex items-center gap-3"><div><p class="font-bold text-gray-800 text-sm uppercase">${icon} ${data.alumno.nombre}</p><p class="text-xs text-gray-500">${data.alumno.matricula}</p></div></div><div class="flex items-center gap-3"><span class="text-xs font-mono text-gray-400 font-bold">${hora}</span><button onclick="eliminarRegistroVivo('${docId}')" class="btn-delete text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50">🗑️</button></div>`;
-                        listaEl.prepend(li);
+                        li.id = `asist-${c.doc.id}`;
+                        li.className = "flex justify-between items-center p-3 rounded shadow-sm border-l-4 bg-white border-green-500 nuevo-registro";
+                        li.innerHTML = `<div><p class="font-bold text-sm uppercase">${d.alumno.nombre}</p><p class="text-xs text-gray-400">${d.alumno.matricula}</p></div><button onclick="eliminarRegistro('${c.doc.id}')" class="text-red-400">🗑️</button>`;
+                        lista.prepend(li);
                     }
-                    if (change.type === "removed") {
-                        const liToRemove = document.getElementById(`asistencia-${docId}`);
-                        if (liToRemove) { liToRemove.remove(); asistentesVivos--; contadorEl.innerText = asistentesVivos; }
+                    if (c.type === "removed") {
+                        document.getElementById(`asist-${c.doc.id}`)?.remove();
+                        asistentesVivos--; cont.innerText = asistentesVivos;
                     }
                 });
             });
         }
 
+        window.eliminarRegistro = async (id) => confirm("¿Eliminar registro?") && await deleteDoc(doc(db, "asistencias", id));
+
+        window.detenerClase = () => {
+            clearInterval(intervaloQR);
+            unsubscribeLive?.();
+            document.getElementById('panel-qr-activo').classList.add('hidden');
+            document.getElementById('config-qr-container').classList.remove('hidden');
+            document.getElementById('lista-asistentes-vivo').innerHTML = '<li id="msg-esperando" class="text-center py-10 italic">Esperando registros...</li>';
+            asistentesVivos = 0; document.getElementById('contador-vivo').innerText = "0";
+            claseActiva = null;
+        };
+
         function generarQR() {
-            if(!claseActiva) return;
-            qrGenerator.value = JSON.stringify({ id: claseActiva, t: new Date().getTime(), s: Math.random().toString(36).substring(7) });
+            qrGenerator.value = JSON.stringify({ id: claseActiva, t: Date.now(), s: Math.random().toString(36).substr(2, 5) });
         }
 
         async function cargarClases() {
-            const listaUl = document.getElementById('lista-clases');
-            const selects = [
+            const list = document.getElementById('lista-clases');
+            const sels = [
                 document.getElementById('select-clase-qr'), 
                 document.getElementById('filtro-clase'), 
                 document.getElementById('select-clase-reporte'),
                 document.getElementById('select-clase-justificar')
             ];
-            listaUl.innerHTML = ""; selects.forEach(s => s.innerHTML = '<option value="">-- Selecciona Materia --</option>');
-            try {
-                const q = query(collection(db, "clases"), where("profesor_uid", "==", usuarioActual.uid));
-                const snap = await getDocs(q);
-                if(snap.empty) listaUl.innerHTML = '<li class="text-gray-500 text-sm">Sin materias.</li>';
-                snap.forEach(d => {
-                    const data = d.data();
-                    const li = document.createElement('li');
-                    li.className = "flex justify-between bg-gray-50 p-3 rounded border";
-                    li.innerHTML = `<div><p class="font-bold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.codigo||''}</p></div><button onclick="eliminarClase('${d.id}')" class="text-red-500 text-xs font-bold border p-1 rounded">Eliminar</button>`;
-                    listaUl.appendChild(li);
-                    selects.forEach(s => s.add(new Option(data.nombre, data.nombre)));
-                });
-            } catch (e) { console.error(e); }
+            list.innerHTML = ""; sels.forEach(s => s.innerHTML = '<option value="">-- Materia --</option>');
+            const q = query(collection(db, "clases"), where("profesor_uid", "==", usuarioActual.uid));
+            const snap = await getDocs(q);
+            snap.forEach(d => {
+                const data = d.data();
+                list.innerHTML += `<li class="flex justify-between bg-gray-50 p-3 rounded border"><span><b>${data.nombre}</b></span><button onclick="eliminarClase('${d.id}')" class="text-red-500 text-xs">Eliminar</button></li>`;
+                sels.forEach(s => s.add(new Option(data.nombre, data.nombre)));
+            });
         }
 
         document.getElementById('form-add-clase').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const nombre = document.getElementById('nueva-clase-nombre').value;
-            const codigo = document.getElementById('nueva-clase-id').value;
-            try {
-                await addDoc(collection(db, "clases"), { nombre, codigo, profesor_uid: usuarioActual.uid, creado: serverTimestamp() });
-                document.getElementById('nueva-clase-nombre').value=""; document.getElementById('nueva-clase-id').value="";
-                alert("Materia guardada."); cargarClases();
-            } catch (e) { alert("Error: "+e.message); }
+            await addDoc(collection(db, "clases"), { 
+                nombre: document.getElementById('nueva-clase-nombre').value, 
+                profesor_uid: usuarioActual.uid 
+            });
+            cargarClases();
+            e.target.reset();
         });
 
-        window.eliminarClase = async (id) => { if(confirm("¿Eliminar?")) { await deleteDoc(doc(db, "clases", id)); cargarClases(); } };
-
-        window.consultarAsistencias = async () => {
-            const filtroClase = document.getElementById('filtro-clase').value;
-            const filtroFecha = document.getElementById('filtro-fecha').value;
-            const tbody = document.getElementById('tabla-body');
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-blue-500">Buscando...</td></tr>';
-            try {
-                let q = query(collection(db, "asistencias"), orderBy("timestamp", "desc"));
-                if (filtroClase) q = query(collection(db, "asistencias"), where("id_sesion", "==", filtroClase), orderBy("timestamp", "desc"));
-                const snap = await getDocs(q);
-                tbody.innerHTML = ""; let count=0;
-                snap.forEach(doc => {
-                    const data = doc.data();
-                    const fechaObj = data.timestamp.toDate();
-                    let fechaFiltro = fechaObj.toISOString().split('T')[0];
-                    if (!filtroFecha || filtroFecha === fechaFiltro) {
-                        count++;
-                        const badge = data.tipo === "justificado" ? 
-                            '<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-bold">Justificado</span>' : 
-                            '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Presente</span>';
-                        tbody.innerHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-6 py-4">${fechaObj.toLocaleDateString()}</td><td class="px-6 py-4 font-mono text-xs">${fechaObj.toLocaleTimeString()}</td><td class="px-6 py-4 font-bold text-gray-700">${data.alumno.nombre}</td><td class="px-6 py-4">${data.alumno.matricula}</td><td class="px-6 py-4">${badge}</td></tr>`;
-                    }
-                });
-                if(count===0) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay datos.</td></tr>';
-            } catch (e) { tbody.innerHTML=`<tr><td colspan="5" class="text-center text-red-500">Error: ${e.message}</td></tr>`; }
-        };
-
-        window.exportarCSV = () => {
-            const rows = document.querySelectorAll('#tabla-body tr');
-            if (rows.length === 0 || rows[0].innerText.includes('No hay datos')) return alert("Sin datos.");
-            let csvContent = "\uFEFFFecha,Hora,Alumno,Matricula,Estado\n";
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td');
-                if(cols.length > 1) { csvContent += Array.from(cols).map(col => `"${col.innerText}"`).join(",") + "\n"; }
-            });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`; link.click();
-        };
-
+        // Sábana de Asistencias (Matriz)
         window.generarMatrizAsistencia = async () => {
-            const materia = document.getElementById('select-clase-reporte').value;
-            const thead = document.getElementById('matriz-head'); const tbody = document.getElementById('matriz-body'); const msg = document.getElementById('msg-reporte');
-            if(!materia) return alert("Selecciona materia");
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center p-4">Procesando...</td></tr>';
-            try {
-                const q = query(collection(db, "asistencias"), where("id_sesion", "==", materia));
-                const snap = await getDocs(q);
-                if(snap.empty) { tbody.innerHTML='<tr><td colspan="10" class="text-center p-4">Sin registros.</td></tr>'; return; }
-                const fechasSet = new Set(); const alumnosMap = {};
-                snap.forEach(doc => {
-                    const d = doc.data(); const f = d.timestamp.toDate().toISOString().split('T')[0]; fechasSet.add(f);
-                    if(!alumnosMap[d.alumno.matricula]) alumnosMap[d.alumno.matricula] = { nombre: d.alumno.nombre, asistencias: {} };
-                    alumnosMap[d.alumno.matricula].asistencias[f] = d.tipo || "presente";
-                });
-                const fechas = Array.from(fechasSet).sort();
-                let head = `<tr><th class="bg-gray-200 sticky left-0 z-10 w-64 text-left p-2">ALUMNO</th><th class="bg-blue-100 text-blue-800 p-2">%</th>`;
-                fechas.forEach(f => { const p=f.split('-'); head+=`<th class="bg-gray-100 min-w-[50px] p-2">${p[2]}/${p[1]}</th>`; });
-                thead.innerHTML = head + '</tr>'; tbody.innerHTML = "";
-                Object.keys(alumnosMap).sort((a,b)=>alumnosMap[a].nombre.localeCompare(alumnosMap[b].nombre)).forEach(mat => {
-                    const al = alumnosMap[mat]; const totalAsist = Object.keys(al.asistencias).length;
-                    const porc = Math.round((totalAsist/fechas.length)*100);
-                    let color = porc<80 ? "text-red-600" : (porc===100?"text-green-600":"text-gray-700");
-                    let row = `<tr class="hover:bg-gray-50"><td class="sticky left-0 bg-white border-r text-left font-bold text-gray-700 px-3 py-2 text-xs whitespace-nowrap">${al.nombre}</td><td class="${color} font-bold border-r bg-blue-50">${porc}%</td>`;
-                    fechas.forEach(f => {
-                        const estado = al.asistencias[f];
-                        let cell = "bg-cell-absent"; let txt = "0";
-                        if(estado === "presente") { cell = "bg-cell-present"; txt = "1"; }
-                        else if(estado === "justificado") { cell = "bg-cell-justified"; txt = "J"; }
-                        row += `<td class="${cell}">${txt}</td>`;
-                    });
-                    tbody.innerHTML += row + '</tr>';
-                });
-                msg.innerText = `Total: ${Object.keys(alumnosMap).length} alumnos, ${fechas.length} sesiones.`;
-            } catch (e) { tbody.innerHTML=`<tr><td colspan="10" class="text-center text-red-500 p-4">Error: ${e.message}</td></tr>`; }
+            const m = document.getElementById('select-clase-reporte').value;
+            const head = document.getElementById('matriz-head');
+            const body = document.getElementById('matriz-body');
+            if(!m) return;
+            body.innerHTML = '<tr><td colspan="10" class="p-4">Cargando...</td></tr>';
+            const q = query(collection(db, "asistencias"), where("id_sesion", "==", m));
+            const snap = await getDocs(q);
+            const fechas = new Set(), alumnos = {};
+            snap.forEach(doc => {
+                const d = doc.data(); const f = d.timestamp.toDate().toISOString().split('T')[0];
+                fechas.add(f);
+                if(!alumnos[d.alumno.matricula]) alumnos[d.alumno.matricula] = { n: d.alumno.nombre, a: {} };
+                alumnos[d.alumno.matricula].a[f] = d.tipo || "presente";
+            });
+            const fechasArr = Array.from(fechas).sort();
+            head.innerHTML = `<tr><th class="p-2 text-left sticky left-0 bg-gray-100">Alumno</th><th class="p-2">%</th>${fechasArr.map(f => `<th class="p-2">${f.slice(5)}</th>`).join('')}</tr>`;
+            body.innerHTML = Object.keys(alumnos).sort().map(mat => {
+                const al = alumnos[mat]; const asis = Object.keys(al.a).length;
+                const p = Math.round((asis/fechasArr.length)*100);
+                return `<tr><td class="p-2 text-left sticky left-0 bg-white font-bold">${al.n}</td><td class="p-2 font-bold">${p}%</td>${fechasArr.map(f => {
+                    const e = al.a[f];
+                    return `<td class="${e==='presente'?'bg-cell-present':(e==='justificado'?'bg-cell-justified':'bg-cell-absent')}">${e==='presente'?'1':(e==='justificado'?'J':'0')}</td>`;
+                }).join('')}</tr>`;
+            }).join('');
         };
     </script>
 </body>

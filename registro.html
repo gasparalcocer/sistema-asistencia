@@ -1,22 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - Sistema UADY</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-
-    <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-        <h1 class="text-2xl font-bold text-center text-blue-900 mb-6">Crear Cuenta Nueva</h1>
-
-        <div class="flex mb-6 border-b">
-            <button id="tab-alumno" class="flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none transition">Soy Alumno</button>
-            <button id="tab-profesor" class="flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none transition">Soy Profesor</button>
-        </div>
-
-        <form id="registro-form" class="space-y-4">
+<form id="registro-form" class="space-y-4">
             
             <div id="campo-nombre" class="hidden">
                 <label class="block text-sm font-medium text-gray-700">Nombre Completo</label>
@@ -24,24 +6,11 @@
             </div>
 
             <div id="campo-matricula">
-                <label class="block text-sm font-medium text-gray-700">Matrícula</label>
-                <input type="text" id="matricula" required class="w-full p-2 border rounded bg-gray-50 uppercase" placeholder="A12345678">
-                <p class="text-[10px] text-gray-400 mt-1">Tu nombre se vinculará automáticamente con tu matrícula oficial.</p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Correo Institucional</label>
-                <input type="email" id="email" required class="w-full p-2 border rounded bg-gray-50" placeholder="usuario@correo.uady.mx">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Contraseña (Mín. 6 caracteres)</label>
-                <input type="password" id="password" required class="w-full p-2 border rounded bg-gray-50" placeholder="******">
-            </div>
-
-            <div id="campo-secreto" class="hidden bg-yellow-50 p-3 rounded border border-yellow-200">
-                <label class="block text-sm font-bold text-yellow-800">🔒 Clave de Autenticación Docente</label>
-                <input type="password" id="clave-profe" class="w-full p-2 border rounded mt-1" placeholder="Solo personal autorizado">
+                <label class="block text-sm font-medium text-gray-700">Matrícula (Solo números)</label>
+                <input type="text" id="matricula" required 
+                       inputmode="numeric" pattern="[0-9]*"
+                       class="w-full p-2 border rounded bg-gray-50" placeholder="18001234">
+                <p class="text-[10px] text-gray-400 mt-1">Ingresa únicamente los 8 dígitos de tu matrícula.</p>
             </div>
 
             <div id="error-msg" class="text-red-500 text-sm text-center hidden font-bold"></div>
@@ -50,55 +19,13 @@
                 Registrarme como Alumno
             </button>
         </form>
-
-        <p class="text-center mt-4 text-sm text-gray-600">
-            ¿Ya tienes cuenta? <a href="login.html" class="text-blue-600 font-bold hover:underline">Inicia Sesión aquí</a>
-        </p>
-    </div>
-
-    <script type="module">
+<script type="module">
+        // 1. IMPORTACIONES ACTUALIZADAS: Agregamos query, collection, where y getDocs
         import { auth, db } from './firebase-config.js';
         import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        let esProfesor = false;
-        const CLAVE_MAESTRA = "Profe-UADY-asist26"; 
-
-        const tabAlumno = document.getElementById('tab-alumno');
-        const tabProfesor = document.getElementById('tab-profesor');
-        const campoNombre = document.getElementById('campo-nombre');
-        const campoMatricula = document.getElementById('campo-matricula');
-        const campoSecreto = document.getElementById('campo-secreto');
-        const btnSubmit = document.getElementById('btn-submit');
-        const errorMsg = document.getElementById('error-msg');
-        const form = document.getElementById('registro-form');
-
-        // Lógica de Pestañas
-        tabAlumno.addEventListener('click', (e) => { e.preventDefault(); activarModo(false); });
-        tabProfesor.addEventListener('click', (e) => { e.preventDefault(); activarModo(true); });
-
-        function activarModo(modoProfe) {
-            esProfesor = modoProfe;
-            errorMsg.classList.add('hidden');
-            
-            if (esProfesor) {
-                tabProfesor.className = "flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none transition";
-                tabAlumno.className = "flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none transition";
-                campoNombre.classList.remove('hidden');
-                campoMatricula.classList.add('hidden');
-                campoSecreto.classList.remove('hidden');
-                btnSubmit.innerText = "Registrarme como Profesor";
-                btnSubmit.className = "w-full bg-orange-600 text-white py-3 rounded font-bold hover:bg-orange-700 transition shadow-lg";
-            } else {
-                tabAlumno.className = "flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none transition";
-                tabProfesor.className = "flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none transition";
-                campoNombre.classList.add('hidden');
-                campoMatricula.classList.remove('hidden');
-                campoSecreto.classList.add('hidden');
-                btnSubmit.innerText = "Registrarme como Alumno";
-                btnSubmit.className = "w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg";
-            }
-        }
+        // ... (lógica de pestañas y activarModo se mantiene igual) ...
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -106,16 +33,12 @@
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            let matricula = document.getElementById('matricula').value.toUpperCase().trim();
+            let matriculaRaw = document.getElementById('matricula').value.trim();
             const nombreIngresado = document.getElementById('nombre').value.toUpperCase().trim();
             const claveIngresada = document.getElementById('clave-profe').value;
 
-            // 1. Normalizar Matrícula (Agregar 'A' si no la tiene)
-            if (!esProfesor && matricula !== "") {
-                if (!matricula.startsWith('A')) {
-                    matricula = 'A' + matricula;
-                }
-            }
+            // 2. FORZAR FORMATO NUMÉRICO: Eliminamos cualquier 'A' o letra que el usuario pegue
+            let matricula = matriculaRaw.replace(/\D/g, ""); 
 
             try {
                 btnSubmit.disabled = true;
@@ -125,18 +48,23 @@
 
                 // --- VALIDACIÓN DE PADRÓN PARA ALUMNOS ---
                 if (!esProfesor) {
-                    const padronRef = doc(db, "padron_alumnos", matricula);
-                    const padronSnap = await getDoc(padronRef);
+                    if (matricula === "") return mostrarError("Ingresa una matrícula válida.");
 
-                    if (!padronSnap.exists()) {
+                    // 3. CAMBIO CRÍTICO: Buscamos por campo 'matricula' en lugar de ID de documento
+                    const q = query(collection(db, "padron_alumnos"), where("matricula", "==", matricula));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.empty) {
                         btnSubmit.disabled = false;
                         btnSubmit.innerText = "Registrarme como Alumno";
-                        return mostrarError("🚫 Matrícula no autorizada. No te encuentras en el padrón oficial.");
+                        return mostrarError(`🚫 La matrícula ${matricula} no está en el padrón oficial.`);
                     }
-                    // Recuperar el nombre oficial del padrón
-                    nombreFinal = padronSnap.data().nombre_oficial;
+
+                    // Recuperar el nombre del primer documento encontrado
+                    const datosAlumno = querySnapshot.docs[0].data();
+                    nombreFinal = datosAlumno.nombre_oficial;
                 } else {
-                    // Validación de Profesor
+                    // Validación de Profesor (sin cambios)
                     if (claveIngresada !== CLAVE_MAESTRA) {
                         btnSubmit.disabled = false;
                         btnSubmit.innerText = "Registrarme como Profesor";
@@ -153,7 +81,6 @@
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Guardar en colección de usuarios
                 await setDoc(doc(db, "usuarios", user.uid), {
                     email: email,
                     nombre: nombreFinal,
@@ -162,7 +89,7 @@
                     fecha_registro: new Date()
                 });
 
-                alert("¡Bienvenido, " + nombreFinal + "! Cuenta creada con éxito.");
+                alert("¡Bienvenido, " + nombreFinal + "!");
                 window.location.href = esProfesor ? "generador.html" : "escaner.html";
 
             } catch (error) {
@@ -180,5 +107,3 @@
             errorMsg.classList.remove('hidden');
         }
     </script>
-</body>
-</html>

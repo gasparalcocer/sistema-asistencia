@@ -637,7 +637,52 @@
             });
             const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })); link.download = `Reporte_${new Date().toISOString().split('T')[0]}.csv`; link.click();
         };
+// Agrega esto al final de tu <script type="module">
+window.registrarManual = async () => {
+    const input = document.getElementById('manual-matricula');
+    const status = document.getElementById('manual-status');
+    const matricula = input.value.trim().toUpperCase();
 
+    if (!claseActiva) return alert("Primero debes iniciar una clase.");
+    if (!matricula) return;
+
+    status.innerText = "⏳ Registrando...";
+
+    try {
+        // 1. Buscar al alumno en el padrón global para obtener su nombre
+        const pSnap = await getDoc(doc(db, "padron_alumnos", matricula));
+        
+        let nombre = "ALUMNO DESCONOCIDO";
+        if (pSnap.exists()) {
+            nombre = pSnap.data().nombre_oficial;
+        }
+
+        // 2. Insertar en la colección de asistencias
+        await addDoc(collection(db, "asistencias"), {
+            id_sesion: claseActiva,
+            alumno: { 
+                nombre: nombre, 
+                matricula: matricula 
+            },
+            timestamp: serverTimestamp(), // Usa el tiempo del servidor
+            tipo: "presente",
+            ubicacion: { manual: true }
+        });
+
+        status.className = "text-xs mt-1 text-green-600 font-bold italic h-4";
+        status.innerText = "✅ Registrado correctamente";
+        input.value = ""; // Limpiar campo
+        
+        // Limpiar mensaje después de 3 segundos
+        setTimeout(() => { status.innerText = ""; }, 3000);
+
+    } catch (e) {
+        console.error(e);
+        status.className = "text-xs mt-1 text-red-500 font-bold italic h-4";
+        status.innerText = "❌ Error al registrar";
+    }
+};
     </script>
 </body>
 </html>
+

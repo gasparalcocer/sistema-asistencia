@@ -24,9 +24,9 @@
             </div>
 
             <div id="campo-matricula">
-                <label class="block text-sm font-medium text-gray-700">Matrícula (Solo números)</label>
-                <input type="text" id="matricula" inputmode="numeric" pattern="[0-9]*" class="w-full p-2 border rounded bg-gray-50" placeholder="18001234">
-                <p class="text-[10px] text-gray-400 mt-1">Ingresa los 8 dígitos de tu matrícula sin letras.</p>
+                <label class="block text-sm font-medium text-gray-700">Matrícula</label>
+                <input type="text" id="matricula" class="w-full p-2 border rounded bg-gray-50 uppercase" placeholder="A13214898">
+                <p class="text-[10px] text-gray-400 mt-1">Puedes ingresar tu matrícula con o sin la letra "A".</p>
             </div>
 
             <div>
@@ -59,7 +59,6 @@
     <script type="module">
         import { auth, db } from './firebase-config.js';
         import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        // Importaciones añadidas: collection, query, where, getDocs
         import { doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let esProfesor = false;
@@ -74,14 +73,12 @@
         const errorMsg = document.getElementById('error-msg');
         const form = document.getElementById('registro-form');
 
-        // Lógica de Pestañas
         tabAlumno.addEventListener('click', (e) => { e.preventDefault(); activarModo(false); });
         tabProfesor.addEventListener('click', (e) => { e.preventDefault(); activarModo(true); });
 
         function activarModo(modoProfe) {
             esProfesor = modoProfe;
             errorMsg.classList.add('hidden');
-            
             if (esProfesor) {
                 tabProfesor.className = "flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none transition";
                 tabAlumno.className = "flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none transition";
@@ -107,63 +104,48 @@
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const matriculaRaw = document.getElementById('matricula').value.trim();
+            const matriculaInput = document.getElementById('matricula').value.trim();
             const nombreIngresado = document.getElementById('nombre').value.toUpperCase().trim();
             const claveIngresada = document.getElementById('clave-profe').value;
-
-            // --- NORMALIZACIÓN DE MATRÍCULA ---
-            // Eliminamos cualquier letra (como la 'A') y dejamos solo números
-            const matricula = matriculaRaw.replace(/\D/g, ""); 
 
             try {
                 btnSubmit.disabled = true;
                 btnSubmit.innerText = "Verificando...";
 
                 let nombreFinal = nombreIngresado;
+                let matriculaLimpia = "";
 
-                // --- VALIDACIÓN DE PADRÓN PARA ALUMNOS ---
                 if (!esProfesor) {
-                    if (!matricula) {
-                        throw new Error("Por favor ingresa tu matrícula.");
-                    }
+                    if (!matriculaInput) throw new Error("Por favor, ingresa tu matrícula.");
 
-                    // Buscamos en la colección 'padron_alumnos' donde el campo 'matricula' coincida
-                    const q = query(collection(db, "padron_alumnos"), where("matricula", "==", matricula));
+                    // --- LIMPIEZA DE MATRÍCULA ---
+                    // Esta línea elimina cualquier letra o símbolo, dejando solo los números.
+                    matriculaLimpia = matriculaInput.replace(/\D/g, ''); 
+
+                    // Consulta en Firestore buscando la parte numérica
+                    const q = query(collection(db, "padron_alumnos"), where("matricula", "==", matriculaLimpia));
                     const querySnapshot = await getDocs(q);
 
                     if (querySnapshot.empty) {
-                        btnSubmit.disabled = false;
-                        btnSubmit.innerText = "Registrarme como Alumno";
-                        return mostrarError(`🚫 Matrícula ${matricula} no encontrada en el padrón oficial.`);
+                        throw new Error("Padrón no encontrado");
                     }
-                    
-                    // Extraemos los datos del alumno encontrado
+
                     const datosAlumno = querySnapshot.docs[0].data();
                     nombreFinal = datosAlumno.nombre_oficial;
                 } else {
-                    // Validación de Profesor
-                    if (claveIngresada !== CLAVE_MAESTRA) {
-                        btnSubmit.disabled = false;
-                        btnSubmit.innerText = "Registrarme como Profesor";
-                        return mostrarError("Clave docente incorrecta.");
-                    }
-                    if (!nombreFinal) {
-                        btnSubmit.disabled = false;
-                        btnSubmit.innerText = "Registrarme como Profesor";
-                        return mostrarError("Por favor, ingresa tu nombre.");
-                    }
+                    if (claveIngresada !== CLAVE_MAESTRA) throw new Error("Clave docente incorrecta.");
+                    if (!nombreFinal) throw new Error("Por favor, ingresa tu nombre.");
                 }
 
-                // --- CREACIÓN DE CUENTA EN AUTH ---
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // --- GUARDADO EN FIRESTORE (USUARIOS ACTIVOS) ---
                 await setDoc(doc(db, "usuarios", user.uid), {
                     email: email,
                     nombre: nombreFinal,
                     rol: esProfesor ? "profesor" : "alumno",
-                    matricula: esProfesor ? "N/A" : matricula,
+                    // Guardamos la matrícula limpia (solo números) para consistencia
+                    matricula: esProfesor ? "N/A" : matriculaLimpia,
                     fecha_registro: new Date()
                 });
 
@@ -172,9 +154,10 @@
 
             } catch (error) {
                 console.error(error);
-                let msg = "Error: " + error.message;
-                if (error.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
-                if (error.code === 'auth/weak-password') msg = "La contraseña debe tener al menos 6 caracteres.";
+                let msg = "Error al registrar.";
+                if (error.message === "Padrón no encontrado") msg = "🚫 Matrícula no autorizada o no encontrada en el padrón.";
+                else if (error.message === "Clave docente incorrecta.") msg = "Clave docente incorrecta.";
+                else if (error.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
                 
                 mostrarError(msg);
                 btnSubmit.disabled = false;

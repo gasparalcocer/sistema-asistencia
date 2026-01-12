@@ -88,11 +88,8 @@
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN DE SEGURIDAD MEJORADA ---
-        const DISTANCIA_MAXIMA_METROS = 200; 
-        const TIEMPO_MAXIMO_QR_SEGUNDOS = 30; // Reducido de 120 a 30 segundos
-        const LAT_SALON = 21.0483; 
-        const LNG_SALON = -89.6433; 
+        // --- CONFIGURACIÓN DE SEGURIDAD ---
+        const TIEMPO_MAXIMO_QR_SEGUNDOS = 30; 
 
         // Variables Globales
         let datosUsuario = { nombre: '', matricula: '' };
@@ -132,8 +129,6 @@
         // --- HELPER: OBTENER HORA REAL DE INTERNET ---
         async function obtenerHoraInternet() {
             try {
-                // Hacemos una petición ligera a nuestro propio servidor (Github Pages) para ver su hora
-                // Esto evita que el alumno cambie la hora de su celular para engañar al sistema.
                 const response = await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' });
                 const serverDateStr = response.headers.get('date');
                 if (serverDateStr) {
@@ -141,8 +136,8 @@
                 }
                 throw new Error("No date header");
             } catch (e) {
-                console.warn("No se pudo obtener hora de internet, usando local con advertencia.");
-                return new Date().getTime(); // Fallback por si falla internet, pero el QR expira rápido
+                console.warn("No se pudo obtener hora de internet, usando local.");
+                return new Date().getTime();
             }
         }
 
@@ -214,104 +209,4 @@
                 const snap = await getDocs(collection(db, "clases"));
                 snap.forEach(d => {
                     const c = d.data();
-                    selectMateria.add(new Option(c.nombre, c.nombre));
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
-            if(confirm("¿Cerrar sesión?")) signOut(auth).then(() => window.location.href = "index.html");
-        });
-
-        function iniciarCamara() {
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, ()=>{});
-        }
-
-        async function onScanSuccess(decodedText) {
-            const materia = selectMateria.value;
-            if (!materia) return alert("⚠️ Selecciona una materia primero.");
-
-            html5QrCode.pause();
-            msgStatus.innerText = "Verificando hora de red...";
-            
-            try {
-                const dataQR = JSON.parse(decodedText);
-                
-                // 1. VALIDACIÓN ANTI-FRAUDE DE TIEMPO
-                const ahoraInternet = await obtenerHoraInternet();
-                const diferenciaTiempo = (ahoraInternet - dataQR.t) / 1000;
-
-                // Validación estricta: No aceptamos QRs de más de 30 seg, ni QRs del futuro
-                if (diferenciaTiempo > TIEMPO_MAXIMO_QR_SEGUNDOS) {
-                    throw new Error("🚫 CÓDIGO CADUCADO<br>Este QR es antiguo. Escanea el que está en la pantalla ahora.");
-                }
-                if (diferenciaTiempo < -5) { // Tolerancia de 5s para relojes desfasados ligeramente
-                    throw new Error("🚫 HORA INVÁLIDA<br>Tu reloj o el código tienen una hora incorrecta.");
-                }
-
-                if (dataQR.id !== materia) throw new Error(`QR Incorrecto.<br>Elegiste: <b>${materia}</b><br>QR es de: <b>${dataQR.id}</b>`);
-                
-                if (!navigator.geolocation) throw new Error("GPS requerido.");
-                
-                msgStatus.innerText = "Verificando ubicación...";
-
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const dist = calcularDistancia(LAT_SALON, LNG_SALON, pos.coords.latitude, pos.coords.longitude);
-                    if (dist > DISTANCIA_MAXIMA_METROS) {
-                        mostrarResultado(false, "Ubicación Incorrecta", `Estás a ${dist.toFixed(0)}m del salón.`);
-                    } else {
-                        // GUARDAR
-                        msgStatus.innerText = "Registrando...";
-                        await addDoc(collection(db, "asistencias"), {
-                            id_sesion: dataQR.id, qr_token: dataQR.t, alumno: datosUsuario,
-                            ubicacion: { lat: pos.coords.latitude, lng: pos.coords.longitude },
-                            timestamp: serverTimestamp(), dispositivo: navigator.userAgent
-                        });
-
-                        msgStatus.innerText = "Actualizando estadísticas...";
-                        const stats = await calcularEstadisticas(materia);
-                        mostrarResultado(true, "¡Asistencia Registrada!", `Clase: ${materia}`, stats);
-                        html5QrCode.stop();
-                    }
-                }, () => mostrarResultado(false, "Error GPS", "Activa ubicación."));
-            } catch (e) { mostrarResultado(false, "Error", e.message); }
-        }
-
-        function mostrarResultado(exito, titulo, desc, stats = null) {
-            document.getElementById('step-scan').classList.add('hidden');
-            document.getElementById('step-result').classList.remove('hidden');
-            
-            const icon = document.getElementById('icon-result');
-            const title = document.getElementById('title-result');
-            const txt = document.getElementById('desc-result');
-
-            if(exito) {
-                icon.innerHTML = "✅"; icon.className = "text-5xl mb-2 text-green-500";
-                title.className = "text-xl font-bold text-green-700";
-                
-                if (stats) {
-                    const elPorc = document.getElementById('stat-nuevo-porc');
-                    elPorc.innerText = stats.porcentaje + "%";
-                    elPorc.className = "text-4xl font-bold " + (stats.porcentaje < 80 ? "text-red-500" : "text-blue-900");
-                    document.getElementById('stat-nuevo-detalles').innerText = `${stats.asistidas} de ${stats.totales} clases asistidas`;
-                }
-            } else {
-                icon.innerHTML = "❌"; icon.className = "text-5xl mb-2 text-red-500";
-                title.className = "text-xl font-bold text-red-700";
-                document.querySelector('.bg-blue-50').classList.add('hidden');
-            }
-            title.innerText = titulo;
-            txt.innerHTML = desc;
-        }
-
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; 
-            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-    </script>
-</body>
-</html>
+                    selectMateria.add(
